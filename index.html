@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light only">
+    <meta name="theme-color" content="#ffffff">
+    <title>Panel de Control de Precios</title>
+    <!-- Añadir fuente Roboto de Google -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+    <!-- Estilos inline para forzar tema claro -->
+    <style>
+      html, body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        margin: 0;
+        padding: 0;
+        font-family: 'Roboto', Arial, sans-serif;
+      }
+      #root {
+        background-color: #ffffff !important;
+        min-height: 100vh;
+        width: 100%;
+      }
+      /* Estilo de fallback si React no carga */
+      #fallback {
+        display: none;
+        text-align: center;
+        padding: 2rem;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      /* Mostrar el fallback después de 3 segundos si la app no carga */
+      @media (prefers-color-scheme: dark) {
+        html, body, #root {
+          background-color: #ffffff !important;
+          color: #000000 !important;
+        }
+      }
+    </style>
+    <!-- Script para mostrar contenido de fallback si React no carga en 3 segundos -->
+    <script>
+      // Mostrar fallback después de 3 segundos si React no ha cargado
+      setTimeout(function() {
+        const root = document.getElementById('root');
+        const fallback = document.getElementById('fallback');
+        if (root && (!root.childNodes.length || root.childNodes.length === 0)) {
+          console.log('React no ha renderizado después de 3 segundos, mostrando fallback');
+          if (fallback) {
+            fallback.style.display = 'block';
+          }
+        }
+      }, 3000);
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- Contenido de fallback que se mostrará si React no carga -->
+    <div id="fallback">
+      <h1>Cargando aplicación...</h1>
+      <p>Si esta pantalla persiste, puede haber un problema técnico.</p>
+      <button onclick="window.location.reload()" style="padding: 8px 16px; background-color: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px;">
+        Recargar página
+      </button>
+      <div style="margin-top: 30px; text-align: left; padding: 20px; background-color: #f5f5f5; border-radius: 8px;">
+        <h3>Solución de problemas:</h3>
+        <ol>
+          <li>Verifique su conexión a internet</li>
+          <li>Intente borrar la caché de su navegador</li>
+          <li>Si usa bloqueadores de anuncios, desactívelos para este sitio</li>
+          <li>Use Chrome o Firefox para una mejor experiencia</li>
+        </ol>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

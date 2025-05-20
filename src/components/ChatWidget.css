@@ -1,0 +1,240 @@
+/* Contenedor principal del widget */
+.chat-widget-container {
+  position: fixed;
+  bottom: 80px;
+  right: 30px;
+  z-index: 1000; /* Asegura que esté sobre otros elementos */
+}
+
+/* Burbuja flotante */
+.chat-bubble {
+  /* background-color: #007bff; /* Azul primario */
+  /* background-color: #fff; */ /* Fondo blanco */
+  background-color: #E0F2FE; /* Celeste muy claro (Sky 100 Tailwind) */
+  /* color: white; */
+  /* border: none; */
+  /* border: 2px solid #000000; */ /* Borde negro */
+  border: 2px solid #0EA5E9; /* Celeste principal (Sky 500 Tailwind) */
+  border-radius: 50%;
+  /* width: 60px; */
+  /* height: 60px; */
+  width: 56px; /* Tamaño ligeramente más grande */
+  height: 56px; /* Tamaño ligeramente más grande */
+  /* font-size: 28px; */
+  cursor: pointer;
+  /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* Sombra más sutil */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* transition: background-color 0.3s ease; */
+  transition: all 0.3s ease; /* Transición para todos los cambios */
+}
+
+.chat-bubble:hover {
+  /* background-color: #0056b3; /* Azul más oscuro */
+  /* background-color: #fff5e6; */ /* Naranja muy claro al pasar el mouse */
+  /* background-color: #f0f0f0; */ /* Gris muy claro al pasar el mouse */
+  background-color: #BAE6FD; /* Celeste un poco más oscuro (Sky 200 Tailwind) */
+  /* border-color: #F57C00; */ /* Naranja más oscuro al pasar el mouse (material orange 700) */
+  /* border-color: #333333; */ /* Gris oscuro al pasar el mouse */
+  border-color: #0284C7; /* Celeste más oscuro (Sky 600 Tailwind) */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Sombra ligeramente más grande */
+}
+
+/* Ajuste para icono dentro de la burbuja */
+.chat-bubble svg {
+  /* color: white; */
+  /* color: #FF9800; */ /* Color naranja del icono */
+  /* color: #000000; */ /* Color negro del icono */
+  color: #0EA5E9; /* Celeste principal (Sky 500 Tailwind) */
+  /* width: 30px; */
+  /* height: 30px; */
+  /* width: 24px; */ /* Icono más pequeño acorde al botón */
+  /* height: 24px; */ /* Icono más pequeño acorde al botón */
+  width: 28px; /* Icono ajustado al nuevo tamaño */
+  height: 28px; /* Icono ajustado al nuevo tamaño */
+}
+
+/* Ventana del chat */
+.chat-window {
+  width: 350px;
+  height: 500px;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #ccc;
+}
+
+/* Encabezado del chat */
+.chat-header {
+  background-color: #f8f9fa; /* Gris claro */
+  padding: 10px 15px;
+  border-bottom: 1px solid #dee2e6; /* Borde sutil */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+}
+
+/* Contenedor para botones del header */
+.chat-header-buttons {
+  display: flex;
+  gap: 5px; /* Espacio entre botones */
+}
+
+/* Estilo base para botones del header */
+.header-button {
+  background: none;
+  border: none;
+  padding: 3px;
+  cursor: pointer;
+  color: #6c757d; /* Gris secundario */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px; /* Ligeramente redondeado */
+  transition: background-color 0.2s ease;
+}
+
+.header-button:hover {
+  background-color: #e2e6ea; /* Gris claro al pasar el mouse */
+  color: #343a40; /* Texto más oscuro al pasar el mouse */
+}
+
+/* Área de mensajes */
+.chat-messages {
+  flex-grow: 1;
+  padding: 15px;
+  overflow-y: auto; /* Permite scroll */
+  background-color: #e9ecef; /* Fondo ligeramente gris */
+}
+
+.message {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 18px;
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+.message.user {
+  background-color: #007bff; /* Azul */
+  color: white;
+  margin-left: auto; /* Alinea a la derecha */
+  border-bottom-right-radius: 5px;
+}
+
+.message.bot {
+  background-color: #ffffff; /* Blanco */
+  color: #333;
+  margin-right: auto; /* Alinea a la izquierda */
+  border: 1px solid #eee;
+  border-bottom-left-radius: 5px;
+}
+
+/* Indicador de carga (...) */
+.message.loading span {
+  display: inline-block;
+  animation: bounce 1.4s infinite ease-in-out both;
+  background-color: #adb5bd;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin: 0 2px;
+}
+
+.message.loading span:nth-child(1) { animation-delay: -0.32s; }
+.message.loading span:nth-child(2) { animation-delay: -0.16s; }
+.message.loading span:nth-child(3) { animation-delay: 0s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1.0); }
+}
+
+/* Área de input */
+.chat-input-area {
+  display: flex;
+  padding: 10px;
+  border-top: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+}
+
+.chat-input-area input {
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  margin-right: 10px;
+  outline: none;
+}
+
+.chat-input-area input:disabled {
+  background-color: #e9ecef;
+}
+
+.send-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.send-button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.send-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Estilo específico para el icono SVG dentro del botón */
+.send-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* --- Estilos para ProductTable --- */
+
+.product-table-container {
+  overflow-x: auto; /* Permite scroll horizontal si la tabla es muy ancha */
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.product-table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px; /* Tamaño de fuente más pequeño para tabla */
+  background-color: #fff; /* Fondo blanco para la tabla */
+}
+
+.product-table-container th,
+.product-table-container td {
+  border: 1px solid #dee2e6; /* Bordes de celda */
+  padding: 6px 8px; /* Espaciado interno de celda */
+  text-align: left;
+}
+
+.product-table-container th {
+  background-color: #f8f9fa; /* Fondo ligero para cabeceras */
+  font-weight: bold;
+}
+
+/* Estilo para filas alternas (opcional) */
+.product-table-container tbody tr:nth-child(odd) {
+  background-color: #f8f9fa;
+} 
