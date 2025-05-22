@@ -205,29 +205,38 @@ export default function DashboardPanel() {
     try {
       setLoading(true);
       setError(null);
-      const { data: productos } = await api.getCachedProducts();
-      const equipos: Equipo[] = productos
-        .filter((producto: Producto) => producto && typeof producto === 'object' && (producto.codigo_producto || producto.nombre_del_producto))
-        .map((producto: Producto) => ({
-          codigo: producto.codigo_producto || 'Sin código',
-          nombre: producto.nombre_del_producto || 'Sin nombre',
-          categoria: producto.categoria || 'Sin categoría',
-          ultima_actualizacion: producto.fecha_costo_original || new Date().toISOString(),
-          costo_fabrica_eur: typeof producto.costo_lista_original_eur === 'number' ? producto.costo_lista_original_eur : 0,
-        }));
-      const equiposDesactualizadosFiltrados = equipos.filter(equipo => {
-        try {
-          const ultimaActualizacion = new Date(equipo.ultima_actualizacion);
-          const ahora = new Date();
-          const horasDiferencia = (ahora.getTime() - ultimaActualizacion.getTime()) / (1000 * 60 * 60);
-          return horasDiferencia > 20;
-        } catch (error) {
-          console.error('Error al procesar fecha:', error);
-          return false;
-        }
-      });
-      setEquiposDesactualizados(equiposDesactualizadosFiltrados);
-      setConfiguracionesRecientes([]); // Placeholder
+      // Se comenta la llamada a api.getCachedProducts() y el procesamiento asociado
+      // const { data: productos } = await api.getCachedProducts();
+      
+      // Asegurarse de que 'productos' es un array antes de procesarlo
+      // if (!Array.isArray(productos)) {
+      //   console.error("Datos de productos inesperados: no es un array", productos);
+      //   throw new Error('Formato de datos de productos inválido recibido del servidor.');
+      // }
+
+      // Se comenta la lógica para equiposDesactualizados y configuracionesRecientes
+      // const equipos: Equipo[] = productos
+      //   .filter((producto: Producto) => producto && typeof producto === 'object' && (producto.codigo_producto || producto.nombre_del_producto))
+      //   .map((producto: Producto) => ({
+      //     codigo: producto.codigo_producto || 'Sin código',
+      //     nombre: producto.nombre_del_producto || 'Sin nombre',
+      //     categoria: producto.categoria || 'Sin categoría',
+      //     ultima_actualizacion: producto.fecha_costo_original || new Date().toISOString(),
+      //     costo_fabrica_eur: typeof producto.costo_lista_original_eur === 'number' ? producto.costo_lista_original_eur : 0,
+      //   }));
+      // const equiposDesactualizadosFiltrados = equipos.filter(equipo => {
+      //   try {
+      //     const ultimaActualizacion = new Date(equipo.ultima_actualizacion);
+      //     const ahora = new Date();
+      //     const horasDiferencia = (ahora.getTime() - ultimaActualizacion.getTime()) / (1000 * 60 * 60);
+      //     return horasDiferencia > 20;
+      //   } catch (error) {
+      //     console.error('Error al procesar fecha:', error);
+      //     return false;
+      //   }
+      // });
+      // setEquiposDesactualizados(equiposDesactualizadosFiltrados);
+      // setConfiguracionesRecientes([]); // Placeholder
     } catch (err: any) {
       console.error("Error fetching initial dashboard data:", err);
       setError(err.message || 'Error al cargar datos del dashboard.');
@@ -390,13 +399,6 @@ export default function DashboardPanel() {
           </div>
         </div>
 
-        {error && (
-          <div style={{ ...cardStyle, backgroundColor: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', marginBottom: '24px' }}>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px' }}>Error General del Dashboard</h3>
-            <p style={{ margin: 0 }}>{error}</p>
-          </div>
-        )}
-
         {/* EQUIPOS MÁS COTIZADOS CHART (MOVED HERE) */}
         <motion.div
           style={chartCardStyle}
@@ -503,68 +505,6 @@ export default function DashboardPanel() {
             <p style={{padding: '20px', textAlign: 'center'}}>No hay datos de historial suficientes para mostrar en el gráfico.</p>
           )}
         </motion.div>
-
-        <div style={gridContainerStyle}>
-          {/* Equipos que necesitan actualización */}
-          {renderEquiposDesactualizados()}
-
-          {/* Configuraciones Previas */}
-          <div style={cardStyle}>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#374151', marginBottom: '16px' }}>
-              Configuraciones Realizadas
-            </h2>
-            
-            <div style={searchBarStyle}>
-              <input
-                type="text"
-                placeholder="Buscar por código o nombre de equipo..."
-                value={filtroConfiguracion}
-                onChange={(e) => setFiltroConfiguracion(e.target.value)}
-                style={inputStyle}
-              />
-              <select 
-                value={categoriaFiltro}
-                onChange={(e) => setCategoriaFiltro(e.target.value)}
-                style={selectStyle}
-              >
-                <option value="todas">Todas las categorías</option>
-                <option value="PTO">PTO</option>
-                <option value="Industrial">Industrial</option>
-                <option value="Motor">Motor</option>
-              </select>
-            </div>
-
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>ID Config.</th>
-                  <th style={thStyle}>Equipo Base</th>
-                  <th style={thStyle}>Items</th>
-                  <th style={thStyle}>Fecha</th>
-                  <th style={thStyle}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {configuracionesRecientes.map((config) => (
-                  <tr key={config.id}>
-                    <td style={tdStyle}>{config.id}</td>
-                    <td style={tdStyle}>{config.equipo_base.nombre}</td>
-                    <td style={tdStyle}>{config.total_items}</td>
-                    <td style={tdStyle}>{config.fecha}</td>
-                    <td style={tdStyle}>
-                      <Link 
-                        to={`/equipos?config=${config.id}`}
-                        style={{ color: '#2563eb', textDecoration: 'none' }}
-                      >
-                        Reutilizar
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
       </div>
     </PageLayout>
   );
