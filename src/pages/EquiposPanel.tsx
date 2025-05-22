@@ -695,7 +695,7 @@ export default function EquiposPanel() {
       // Agregar un retraso de 1 segundo para mostrar la animación
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const response = await fetch(`/api/products/code/${codigoProducto}/toggle-discontinued`, {
+      const response = await fetch(`https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/code/${codigoProducto}/toggle-discontinued`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ descontinuado: nuevoEstadoDescontinuado }),
