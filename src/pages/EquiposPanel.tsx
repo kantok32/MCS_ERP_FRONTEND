@@ -692,6 +692,9 @@ export default function EquiposPanel() {
     );
 
     try {
+      // Agregar un retraso de 1 segundo para mostrar la animación
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       const response = await fetch(`/api/products/code/${codigoProducto}/toggle-discontinued`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1025,13 +1028,16 @@ export default function EquiposPanel() {
                     }
 
                     return (
-                      <tr 
+                      <motion.tr 
                         key={producto.codigo_producto || `prod-${index}-${Math.random()}`} 
                         className="table-row" 
                         style={{ 
                           backgroundColor: rowBackgroundColor, 
                           borderBottom: '1px solid #e5e7eb' 
                         }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
                       >
                         {/* Column: Código */}
                         <td style={{ padding: '16px', textAlign: 'left' }}>{producto.codigo_producto || '-'}</td>
@@ -1081,7 +1087,7 @@ export default function EquiposPanel() {
                           <td style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                             {/* NUEVO DIV CONTENEDOR CON FLEXBOX */}
                             <div className="flex items-center justify-center space-x-1">
-                              <button
+                              <motion.button
                                 title={producto.descontinuado ? "Reactivar Equipo" : "Descontinuar Equipo"}
                                 onClick={() => handleToggleDescontinuado(producto)}
                                 disabled={loadingDescontinuado === producto.codigo_producto}
@@ -1091,30 +1097,41 @@ export default function EquiposPanel() {
                                   cursor: 'pointer',
                                   color: producto.descontinuado ? '#22c55e' : '#f59e0b',
                                   padding: '6px',
-                                  // verticalAlign: 'middle', // Eliminado
-                                  display: 'inline-flex',    // Añadido
-                                  alignItems: 'center'     // Añadido
+                                  display: 'inline-flex',
+                                  alignItems: 'center'
                                 }}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
                               >
                                 {loadingDescontinuado === producto.codigo_producto
-                                  ? <RefreshCw size={18} className="animate-spin" />
+                                  ? <motion.div
+                                      animate={{ rotate: 360 }}
+                                      transition={{
+                                        duration: 1,
+                                        repeat: Infinity,
+                                        ease: "linear"
+                                      }}
+                                    >
+                                      <RefreshCw size={18} />
+                                    </motion.div>
                                   : producto.descontinuado ? <ArchiveRestore size={18} /> : <Archive size={18} />}
-                              </button>
-                              <button
+                              </motion.button>
+                              <motion.button
                                 onClick={() => handleOpenEditModal(producto)}
                                 className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 transition-colors duration-150"
                                 title="Editar Equipo"
                                 style={{
                                   background: 'none',
                                   padding: '6px',
-                                  // verticalAlign: 'middle', // Eliminado (ya estaba, pero confirmando)
                                   display: 'inline-flex',
                                   alignItems: 'center'
                                 }}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
                               >
                                 <FileEdit size={18} className="text-blue-600" />
-                              </button>
-                              <button
+                              </motion.button>
+                              <motion.button
                                 title="Eliminar Equipo"
                                 onClick={() => handleOpenConfirmDeleteModal(producto)}
                                 style={{
@@ -1123,17 +1140,18 @@ export default function EquiposPanel() {
                                   cursor: 'pointer',
                                   color: '#EF4444',
                                   padding: '6px',
-                                  // verticalAlign: 'middle', // Eliminado
-                                  display: 'inline-flex',    // Añadido
-                                  alignItems: 'center'     // Añadido
+                                  display: 'inline-flex',
+                                  alignItems: 'center'
                                 }}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
                               >
                                 <Trash2 size={18} />
-                              </button>
+                              </motion.button>
                             </div>
                           </td>
                         )}
-                      </tr>
+                      </motion.tr>
                     );
                   })}
                 </tbody>
