@@ -7,7 +7,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { motion } from 'framer-motion';
 import { api } from '../services/api';
 import { Producto } from '../types/product';
-import { getCalculosHistorial, HistorialCalculoItem } from '../services/calculoHistorialService';
+import { getCalculosHistorial, HistorialCalculoItem, PaginatedHistorialResponse, HistorialQueryParams } from '../services/calculoHistorialService';
 import { Bar } from 'react-chartjs-2';
 
 // Register Chart.js components
@@ -56,7 +56,7 @@ export default function DashboardPanel() {
   const [error, setError] = useState<string | null>(null);
 
   // State for historial chart
-  const [historialData, setHistorialData] = useState<HistorialCalculoItem[]>([]);
+  const [historialDataForChart, setHistorialDataForChart] = useState<HistorialCalculoItem[]>([]);
   const [equiposCotizadosChartData, setEquiposCotizadosChartData] = useState<any>(null);
   const [loadingHistorial, setLoadingHistorial] = useState<boolean>(true);
   const [errorHistorial, setErrorHistorial] = useState<string | null>(null);
@@ -241,10 +241,26 @@ export default function DashboardPanel() {
     try {
       setLoadingHistorial(true);
       setErrorHistorial(null);
-      const rawHistorialData = await getCalculosHistorial();
-      setHistorialData(rawHistorialData);
+
+      // Pedir una cantidad grande de resultados para el gráfico. 
+      // Ajustar 'limit' según la cantidad de historial que sea relevante para el gráfico.
+      // Idealmente, el backend tendría un endpoint específico para datos agregados de gráfico.
+      const params: HistorialQueryParams = {
+        page: 1, // Empezar desde la primera página
+        limit: 1000, // Pedir hasta 1000 resultados (ajustar según necesidad y rendimiento)
+        sortBy: 'createdAt', // Podría ser relevante para el gráfico
+        sortOrder: 'desc', // Podría ser relevante para el gráfico
+        // No incluimos 'search' aquí a menos que el gráfico deba reflejar solo resultados de búsqueda
+      };
+
+      const response: PaginatedHistorialResponse = await getCalculosHistorial(params);
+      // Usar response.data que contiene el array de ítems
+      const rawHistorialData = response.data;
+
+      setHistorialDataForChart(rawHistorialData); // Guardar los datos para posible uso futuro si es necesario mostrar la lista completa
 
       const equipoStats: { [key: string]: { count: number; totalValue: number; name: string } } = {};
+      // Ahora el forEach se aplica al array 'rawHistorialData'
       rawHistorialData.forEach(item => {
         const principalItem = item.itemsParaCotizar?.[0]?.principal;
         const equipoNombre = principalItem?.nombre_del_producto;
@@ -283,7 +299,7 @@ export default function DashboardPanel() {
     } finally {
       setLoadingHistorial(false);
     }
-  }, []); // Dependencies for fetchHistorialChartData (api.getCachedProducts might be one if it changes)
+  }, []); // Dependencies for fetchHistorialChartData
 
   useEffect(() => {
     fetchData();

@@ -679,6 +679,18 @@ export default function EquiposPanel() {
     setErrorDescontinuado(prev => ({ ...prev, [codigoProducto]: null })); // Limpiar error previo
     const nuevoEstadoDescontinuado = !productoAActualizar.descontinuado;
 
+    // Guardar el estado anterior para poder hacer rollback si es necesario
+    const estadoAnterior = productoAActualizar.descontinuado;
+
+    // Actualización optimista del estado
+    setProductosOriginales(prev => 
+      prev.map(p => 
+        p.codigo_producto === codigoProducto 
+          ? { ...p, descontinuado: nuevoEstadoDescontinuado, caracteristicas: {...p.caracteristicas, descontinuado: nuevoEstadoDescontinuado} }
+          : p
+      )
+    );
+
     try {
       const response = await fetch(`/api/products/code/${codigoProducto}/toggle-discontinued`, {
         method: 'PUT',
@@ -692,24 +704,34 @@ export default function EquiposPanel() {
         throw new Error(responseData.message || 'Error al actualizar el estado del producto.');
       }
       
-      // Actualizar el estado local con la respuesta del backend (o simplemente el nuevo estado)
-      // Es mejor si el backend devuelve el producto actualizado completo para mayor consistencia.
+      // Actualizar el estado con la respuesta del backend para mantener consistencia
       setProductosOriginales(prev => 
         prev.map(p => 
           p.codigo_producto === codigoProducto 
-            ? { ...p, ...responseData.data, descontinuado: nuevoEstadoDescontinuado, caracteristicas: {...p.caracteristicas, ...responseData.data?.caracteristicas, descontinuado: nuevoEstadoDescontinuado} } // Asegurar que el estado local refleje la estructura de la BD
+            ? { ...p, ...responseData.data, descontinuado: nuevoEstadoDescontinuado, caracteristicas: {...p.caracteristicas, ...responseData.data?.caracteristicas, descontinuado: nuevoEstadoDescontinuado} }
             : p
         )
       );
-      // setProductos se actualizará por el useEffect que depende de productosOriginales.
 
-      // Opcional: Mostrar notificación de éxito
+      // Mostrar notificación de éxito
       console.log(`Estado descontinuado de ${codigoProducto} actualizado a ${nuevoEstadoDescontinuado} en backend y localmente.`);
 
     } catch (error: any) {
       console.error(`Error al cambiar estado descontinuado para ${codigoProducto}:`, error);
-      setErrorDescontinuado(prev => ({ ...prev, [codigoProducto]: error.message || 'Error de red' }));
-      // Opcional: Mostrar notificación de error al usuario
+      
+      // Rollback del estado en caso de error
+      setProductosOriginales(prev => 
+        prev.map(p => 
+          p.codigo_producto === codigoProducto 
+            ? { ...p, descontinuado: estadoAnterior, caracteristicas: {...p.caracteristicas, descontinuado: estadoAnterior} }
+            : p
+        )
+      );
+
+      setErrorDescontinuado(prev => ({ 
+        ...prev, 
+        [codigoProducto]: error.message || 'Error al actualizar el estado. Por favor, intente nuevamente.' 
+      }));
     } finally {
       setLoadingDescontinuado(null);
     }
