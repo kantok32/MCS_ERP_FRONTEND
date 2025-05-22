@@ -353,7 +353,7 @@ export default function EquiposPanel() {
       params.append('modelo', producto.Modelo);
       params.append('categoria', producto.categoria);
 
-      const response = await fetch(`/api/products/opcionales?${params.toString()}`);
+      const response = await fetch(`https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/opcionales?${params.toString()}`);
       const data: OpcionalesResponse = await response.json();
 
       if (!response.ok || !data.success) { 
