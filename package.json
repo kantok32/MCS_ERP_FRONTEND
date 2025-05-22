@@ -17,6 +17,7 @@
     "@remix-run/router": "^1.23.0",
     "axios": "^1.4.0",
     "chart.js": "^4.3.0",
+    "firebase": "^11.8.1",
     "framer-motion": "^12.11.0",
     "lucide-react": "^0.511.0",
     "node-fetch": "^3.3.2",
