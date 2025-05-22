@@ -319,11 +319,54 @@ export default function CargaEquiposPanel() {
   };
 
   // --- Lógica para descargar la plantilla de carga masiva PLANA (Equipos) ---
-  const handleDownloadTemplate = () => {
-    // Asume que tienes una forma de obtener la URL base de la API, ej. process.env.REACT_APP_API_URL
-    // o si el frontend y backend están en el mismo dominio, puedes usar una ruta relativa.
-    const templateUrl = `/api/products/download-template`;
-    window.location.href = templateUrl; // Inicia la descarga
+  const handleDownloadTemplate = async () => {
+    try {
+      const templateUrl = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/download-template'; // Usar URL absoluta del backend
+      const response = await fetch(templateUrl);
+
+      if (!response.ok) {
+        // Intentar leer el mensaje de error del backend si está disponible
+        let errorMessage = `Error ${response.status} al descargar plantilla.`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // Si no es JSON, usar el estado del texto
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Obtener el nombre del archivo de la cabecera Content-Disposition si está disponible
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'template_carga_equipos.xlsx'; // Nombre por defecto
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename\*=UTF-8''(.*)$/i) || contentDisposition.match(/filename="(.*?)"$/i);
+        if (filenameMatch && filenameMatch[1]) {
+          try {
+            filename = decodeURIComponent(filenameMatch[1].replace(/"/g, ''));
+          } catch (e) {
+            console.error('Error decoding filename from header', e);
+          }
+        }
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename; // Usar el nombre de archivo obtenido o el por defecto
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      console.log('Descarga de plantilla iniciada.');
+
+    } catch (error: any) {
+      console.error('Error al descargar plantilla:', error);
+      alert(`Error al descargar plantilla: ${error.message || 'Error desconocido'}`);
+    }
   };
 
   // --- Lógica para descargar la plantilla de carga masiva MATRICIAL (Especificaciones CSV) ---
