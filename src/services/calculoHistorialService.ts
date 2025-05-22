@@ -99,27 +99,43 @@ export interface HistorialCalculoItem {
   // Añadir otros campos que se obtienen del backend y se necesitan en el frontend
 }
 
-// Función para obtener todos los historiales de cálculo
-export const getCalculosHistorial = async (): Promise<HistorialCalculoItem[]> => {
-  // const response = await fetch('/api/calculo-historial', {
-  //   method: 'GET',
-  //   headers: {
-  //     'Content-Type': 'application/json',
-  //   },
-  // });
+// Interfaz para los parámetros de búsqueda, paginación y ordenamiento
+export interface HistorialQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
 
-  // if (!response.ok) {
-  //   const errorData = await response.json();
-  //   console.error('[calculoHistorialService] Error API obteniendo historial:', errorData);
-  //   throw new Error(errorData.message || `Error ${response.status} al obtener el historial.`);
-  // }
+// Interfaz para la respuesta paginada del backend
+export interface PaginatedHistorialResponse {
+  data: HistorialCalculoItem[];
+  total: number; // Total de documentos
+  page: number; // Número de página actual
+  limit: number; // Elementos por página
+  totalPages: number; // Total de páginas
+  // Otros metadatos si el backend los envía
+}
 
-  // return await response.json() as HistorialCalculoItem[];
+// Función para obtener historiales de cálculo con paginación, búsqueda y ordenamiento
+export const getCalculosHistorial = async (params?: HistorialQueryParams): Promise<PaginatedHistorialResponse> => {
   try {
-    const response = await apiClient.get<HistorialCalculoItem[]>('/calculo-historial');
-    return response.data;
+    // Construimos los parámetros de consulta para la URL
+    const queryParams = new URLSearchParams();
+    if (params?.page !== undefined) queryParams.append('page', params.page.toString());
+    if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString());
+    if (params?.search !== undefined) queryParams.append('search', params.search);
+    if (params?.sortBy !== undefined) queryParams.append('sortBy', params.sortBy);
+    if (params?.sortOrder !== undefined) queryParams.append('sortOrder', params.sortOrder);
+
+    const url = '/calculo-historial' + (queryParams.toString() ? `?${queryParams.toString()}` : '');
+
+    // Esperamos que la respuesta sea la estructura paginada
+    const response = await apiClient.get<PaginatedHistorialResponse>(url);
+    return response.data; // Retornamos directamente la data del AxiosResponse
   } catch (error) {
-    console.error('[calculoHistorialService] Error obteniendo historial (vía apiClient):', error);
+    console.error('[calculoHistorialService] Error obteniendo historial paginado (vía apiClient):', error);
     throw error;
   }
 }; 
