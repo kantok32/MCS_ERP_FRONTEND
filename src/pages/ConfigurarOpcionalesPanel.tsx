@@ -34,10 +34,12 @@ interface Producto {
 
 interface OpcionalesResponse {
   total: number;
-  products: Producto[]; // Lista de productos opcionales
+  products?: Producto[]; // Lista de productos opcionales en el endpoint original
   success: boolean;
   data?: { // Estructura anidada observada en handleOpcionales
-    products: Producto[];
+    products?: Producto[]; // Lista de productos opcionales (posiblemente obsoleta)
+    productosOpcionales?: Producto[]; // Nueva propiedad para el endpoint by-body
+    productoPrincipal?: Producto; // Puede que venga el principal aquí también
     total: number;
     source?: string;
   };
@@ -102,71 +104,93 @@ export default function ConfigurarOpcionalesPanel() {
         nombre: principal.nombre_del_producto
       });
 
-      // Primero verificamos que el producto principal exista
+      // Eliminamos la verificación inicial con GET /api/products/{codigo}
+      // dado que ese endpoint parece no funcionar como esperado o no existir.
+      // Procedemos directamente a la llamada POST para obtener opcionales.
+
       const API_BASE_URL = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api';
-      const verifyResponse = await fetch(`${API_BASE_URL}/products/${principal.codigo_producto}`);
-      
-      if (!verifyResponse.ok) {
-        throw new Error(`Producto principal con código ${principal.codigo_producto} no encontrado.`);
-      }
 
-      // Construimos los parámetros para la búsqueda de opcionales
-      const params = new URLSearchParams();
-      params.append('codigo', principal.codigo_producto);
       // Extraemos solo la primera parte del modelo (letras y números antes del primer espacio o carácter especial)
+      // Hacemos esto porque el backend espera solo esta parte para el filtrado.
       const modeloLimpio = principal.Modelo.match(/^[A-Za-z0-9]+/)?.[0] || principal.Modelo;
-      params.append('modelo', modeloLimpio);
 
-      console.log('[ConfigurarOpcionalesPanel] Enviando parámetros para opcionales:', {
+      // Preparamos los datos para la búsqueda de opcionales en el body
+      // Incluimos 'modelo' ya que es necesario para el filtrado en el backend.
+      const requestBody = {
         codigo: principal.codigo_producto,
         modelo: modeloLimpio
+      };
+
+      console.log('[ConfigurarOpcionalesPanel] Enviando datos en body para opcionales (POST):', requestBody);
+
+      // Llamamos al endpoint de opcionales usando POST y body
+      const response = await fetch(`${API_BASE_URL}/products/opcionales-by-body`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
       });
 
-      // Llamamos al endpoint de opcionales
-      const response = await fetch(`${API_BASE_URL}/products/opcionales?${params.toString()}`);
-      
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
-        console.error('[ConfigurarOpcionalesPanel] Error en respuesta de opcionales:', {
+        console.error('[ConfigurarOpcionalesPanel] Error en respuesta de opcionales (POST):', {
           status: response.status,
           statusText: response.statusText,
           errorData,
-          url: `${API_BASE_URL}/products/opcionales?${params.toString()}`
+          url: `${API_BASE_URL}/products/opcionales-by-body`
         });
-        
-        if (response.status === 404) {
-          throw new Error(`No se encontraron opcionales para el producto ${principal.codigo_producto}`);
+
+        // Mejorar los mensajes de error basados en el estado de la respuesta
+        let errorMessage = `Error al obtener opcionales para el producto ${principal.codigo_producto}.`;
+
+        if (errorData && errorData.message) {
+           errorMessage = `Error del backend: ${errorData.message}`; // Usar mensaje del backend si existe
+        } else {
+           errorMessage += ` Estado: ${response.status}`; // Si no hay mensaje, usar estado
+           if (response.statusText) errorMessage += ` (${response.statusText})`;
         }
-        
-        throw new Error(errorData.message || `Error del servidor: ${response.status}`);
+
+        if (response.status === 404) {
+           errorMessage = `Endpoint POST /opcionales-by-body no encontrado o no hay opcionales para este código.`;
+           if (errorData && errorData.message) errorMessage += ` Mensaje: ${errorData.message}`; // Añadir mensaje del backend si hay
+        } else if (response.status === 400) {
+           errorMessage = `Solicitud incorrecta para opcionales del producto ${principal.codigo_producto}.`;
+           if (errorData && errorData.message) errorMessage += ` Mensaje: ${errorData.message}`; // Añadir mensaje del backend si hay
+        }
+
+        throw new Error(errorMessage);
       }
 
       const data: OpcionalesResponse = await response.json();
-      console.log('[ConfigurarOpcionalesPanel] Respuesta de opcionales:', data);
-      
+      console.log('[ConfigurarOpcionalesPanel] Respuesta de opcionales (POST):', data);
+
       if (!data.success) {
+         // Si la respuesta es 200 OK pero success: false
         throw new Error(data.message || 'Error al obtener opcionales');
       }
-      
+
       // Procesamos los opcionales
-      const opcionales = data.data?.products || data.products || [];
-      
-      // Filtramos los opcionales para asegurarnos de que solo sean opcionales válidos
-      const opcionalesFiltrados = opcionales.filter(opcional => 
-        opcional.codigo_producto && 
-        opcional.nombre_del_producto && 
-        opcional.es_opcional === true
+      // Ahora leemos de data.productosOpcionales según la estructura de respuesta esperada.
+      // También eliminamos el filtro es_opcional === true ya que la data real parece tenerlo en false para opcionales.
+      const opcionales = data.data?.productosOpcionales || [];
+
+      // El filtro de validación básica se mantiene: código y nombre deben existir.
+      const opcionalesFiltrados = opcionales.filter((opcional: Producto) =>
+        opcional.codigo_producto &&
+        opcional.nombre_del_producto
+        // Filtro es_opcional === true eliminado aquí
       );
 
-      console.log('[ConfigurarOpcionalesPanel] Opcionales encontrados:', opcionalesFiltrados);
-      
+      console.log('[ConfigurarOpcionalesPanel] Opcionales encontrados después de procesar:', opcionalesFiltrados);
+
       if (opcionalesFiltrados.length === 0) {
-        setErrorOpcionales(prev => ({ 
-          ...prev, 
-          [principal.codigo_producto!]: 'No se encontraron opcionales para este producto.' 
+        setErrorOpcionales(prev => ({
+          ...prev,
+          [principal.codigo_producto!]: 'No se encontraron opcionales para este producto (después de filtrar).' // Mensaje actualizado para claridad
         }));
       }
-      
+
       setOpcionalesDisponibles(prev => ({ ...prev, [principal.codigo_producto!]: opcionalesFiltrados }));
 
     } catch (error: any) {
@@ -426,7 +450,7 @@ export default function ConfigurarOpcionalesPanel() {
 
   // Mostrar indicador de carga si los productos se están cargando desde el estado inicialmente
   // y no se ha cargado ningún producto nuevo mediante búsqueda aún.
-  if (productosPrincipales.length === 0 && ( (state?.fromHistory && state.mainProductCodigo) || (state?.productosPrincipales && state.productosPrincipales.length > 0 ) ) ) {
+  if (productosPrincipales.length === 0 && ( (state?.fromHistory && state.mainProductCodigo) || (state?.productosPrincipales && state.productosPrincipales.length > 0 ) )) {
     let isLoadingFromState = false;
     if (state?.fromHistory && state.mainProductCodigo && loadingOpcionales[state.mainProductCodigo]) {
         isLoadingFromState = true;
