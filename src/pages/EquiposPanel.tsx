@@ -148,6 +148,30 @@ const renderSpecifications = (specs: any) => {
     return <p style={{ fontSize: '13px', color: '#6B7280' }}>No hay especificaciones técnicas detalladas disponibles.</p>;
   }
 
+  // Si specs es un objeto plano (todos los valores son primitivos o strings), mostrar como lista simple
+  const isFlatObject = Object.values(specs).every(
+    v => typeof v !== 'object' || v === null
+  );
+  if (isFlatObject) {
+    return (
+      <div style={{ marginBottom: '20px' }}>
+        <h4 style={{ fontSize: '15px', fontWeight: 600, color: '#1e88e5', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px', marginBottom: '12px' }}>
+          Especificaciones Técnicas
+        </h4>
+        <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px', alignItems: 'center' }}>
+          {Object.entries(specs).map(([key, value]) => (
+            <React.Fragment key={key}>
+              <dt style={{ fontSize: '13px', fontWeight: 500, color: '#4B5563' }}>{key.replace(/_/g, ' ')}:</dt>
+              <dd style={{ fontSize: '13px', color: '#1F2937', margin: 0, wordBreak: 'break-word' }}>
+                {typeof value === 'boolean' ? (value ? 'Sí' : 'No') : value === null || value === undefined ? '-' : String(value)}
+              </dd>
+            </React.Fragment>
+          ))}
+        </dl>
+      </div>
+    );
+  }
+
   // Orden específico deseado para las categorías principales
   const categoryOrder = [
     'DIMENSIONES', 
