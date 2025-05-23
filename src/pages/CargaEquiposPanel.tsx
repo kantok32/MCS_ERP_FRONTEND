@@ -363,52 +363,43 @@ export default function CargaEquiposPanel() {
       console.log('Iniciando carga PLANA (Nuevos Equipos) al endpoint:', endpoint);
     } else if (uploadType === 'matrix') {
       endpoint = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/upload-specifications';
-      fileNameInForm = 'archivoEspecificaciones'; // Coincide con la ruta /upload-specifications
+      fileNameInForm = 'file'; // Cambiado a 'file' para coincidir con lo que espera el backend
       console.log('Iniciando carga MATRICIAL (Actualizar Especificaciones) al endpoint:', endpoint);
     } else {
       setUploadStatus({ type: 'error', message: 'Tipo de carga no reconocido.' });
       return;
     }
+
     formData.append(fileNameInForm, selectedFile);
 
     try {
-      const response = await fetch(endpoint, { // Usar el endpoint dinámico
+      const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
-        // ¡No establecer Content-Type manualmente para FormData!
+        // No establecer Content-Type manualmente, dejar que el navegador lo haga con el boundary correcto
       });
 
-      const result = await response.json();
-
-      // --- Revisar si hubo errores, incluso con respuesta OK (status 207) --- 
-      const hasErrors = result.summary?.errors?.length > 0;
-      const finalStatusType = hasErrors ? 'error' : 'success';
-      const finalMessage = hasErrors 
-          ? `Error al cargar: ${result.summary.errors.length} ${result.summary.errors.length === 1 ? 'error encontrado' : 'errores encontrados'}.` 
-          : (result.message || 'Carga completada exitosamente.');
-      // ------------------------------------------------------------------------
-
-      if (!response.ok && !hasErrors) { // Si la respuesta NO es ok Y NO es por errores parciales
-        // Usar mensaje de error del backend
-        throw new Error(result.message || `Error del servidor: ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error del servidor: ${response.status}`);
       }
 
-      // Establecer estado final (éxito o error basado en errores parciales)
-      setUploadStatus({
-        type: finalStatusType, 
-        message: finalMessage,
-        summary: result.summary // Guardar el resumen para mostrar
+      const result = await response.json();
+      setUploadStatus({ 
+        type: 'success', 
+        message: 'Archivo procesado correctamente',
+        summary: result
       });
-      console.log('Resultado carga masiva:', result);
-      setSelectedFile(null); // Limpiar archivo seleccionado
-      // Limpiar el input de archivo (forma un poco hacky pero común)
-      const fileInput = document.getElementById('bulk-upload-input') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
-
-    } catch (error: unknown) {
+      
+      // Resetear el archivo seleccionado después de una carga exitosa
+      setSelectedFile(null);
+      
+    } catch (error) {
       console.error('Error en carga masiva:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido durante la carga.';
-      setUploadStatus({ type: 'error', message: errorMessage });
+      setUploadStatus({ 
+        type: 'error', 
+        message: error instanceof Error ? error.message : 'Error desconocido al procesar el archivo'
+      });
     }
   };
   // <<<------------------------------------>>>
