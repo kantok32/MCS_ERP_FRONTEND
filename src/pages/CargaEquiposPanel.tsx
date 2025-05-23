@@ -94,6 +94,8 @@ interface UploadStatus {
   summary?: any; // Para mantener el resumen de la carga
 }
 
+const BACKEND_URL = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app';
+
 export default function CargaEquiposPanel() {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
@@ -358,7 +360,7 @@ export default function CargaEquiposPanel() {
     try {
       const formData = new FormData();
       formData.append('archivoExcelPlain', file);
-      const response = await fetch('/api/products/upload-plain', {
+      const response = await fetch(`${BACKEND_URL}/api/products/upload-plain`, {
         method: 'POST',
         body: formData,
       });
@@ -378,7 +380,7 @@ export default function CargaEquiposPanel() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const response = await fetch('/api/products/upload-specifications', {
+      const response = await fetch(`${BACKEND_URL}/api/products/upload-specifications`, {
         method: 'POST',
         body: formData,
       });
