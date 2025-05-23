@@ -112,6 +112,9 @@ export default function CargaEquiposPanel() {
 
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Estado para mostrar recomendaciones según plantilla seleccionada
+  const [plantillaSeleccionada, setPlantillaSeleccionada] = useState<'equipos' | 'especificaciones' | null>(null);
+
   // --- Manejadores de Input --- 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -342,6 +345,7 @@ export default function CargaEquiposPanel() {
       console.log('Archivo seleccionado:', event.target.files[0].name);
     } else {
       setSelectedFile(null);
+      setUploadStatus({ type: 'idle', message: '' }); // Reset status if no file
     }
   };
 
@@ -365,50 +369,41 @@ export default function CargaEquiposPanel() {
     setUploadStatus({ type: 'uploading', message: 'Subiendo y procesando archivo...' });
 
     const formData = new FormData();
-    formData.append('file', selectedFile, selectedFile.name);
+    let endpoint = '';
+    let fieldName = '';
 
-    const endpoint = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/upload-specifications';
+    if (uploadType === 'plain') {
+      endpoint = '/api/products/upload-plain';
+      fieldName = 'archivoExcelPlain';
+    } else if (uploadType === 'matrix') {
+      endpoint = '/api/products/upload-specifications';
+      fieldName = 'file';
+    } else {
+      setUploadStatus({ type: 'error', message: 'Tipo de carga no reconocido.' });
+      return;
+    }
+
+    formData.append(fieldName, selectedFile, selectedFile.name);
 
     try {
-      console.log('Enviando archivo:', {
-        nombre: selectedFile.name,
-        tipo: selectedFile.type,
-        tamaño: selectedFile.size,
-        extension: fileExtension,
-        nombreCampo: 'file'
-      });
-
       const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
-        // No establecer Content-Type, dejar que el navegador lo maneje
       });
-
       const responseText = await response.text();
-      let result;
+      let data;
       try {
-        result = JSON.parse(responseText);
+        data = JSON.parse(responseText);
       } catch (e) {
-        console.error('Error al parsear respuesta como JSON:', e);
         throw new Error(responseText);
       }
-
       if (!response.ok) {
-        throw new Error(result.message || `Error del servidor: ${response.status} - ${responseText}`);
+        throw new Error(data.message || 'Error del servidor');
       }
-
-      setUploadStatus({ 
-        type: 'success', 
-        message: 'Archivo procesado correctamente',
-        summary: result
-      });
+      setUploadStatus({ type: 'success', message: 'Archivo procesado correctamente.', summary: data });
       setSelectedFile(null);
     } catch (error) {
-      console.error('Error en carga masiva:', error);
-      setUploadStatus({ 
-        type: 'error', 
-        message: error instanceof Error ? error.message : 'Error desconocido al procesar el archivo'
-      });
+      setUploadStatus({ type: 'error', message: error instanceof Error ? error.message : 'Error desconocido' });
     }
   };
   // <<<------------------------------------>>>
@@ -598,45 +593,65 @@ export default function CargaEquiposPanel() {
       {/* Sección de Carga Masiva */}
       <div style={sectionStyle}>
         <div>
-          <p style={descriptionStyle}>
-            Utilice esta sección para <b>actualizar las especificaciones técnicas de equipos existentes</b> mediante la plantilla correspondiente. Descargue la plantilla, complete los datos siguiendo las instrucciones y suba el archivo. <br /><br />
-            <b>Recomendaciones:</b>
-            <ul style={{marginTop: '8px', lineHeight: '1.5'}}>
-              <li>El archivo debe ser <b>.xlsx, .xls o .csv</b> y no superar los <b>10MB</b>.</li>
-              <li>La <b>primera fila</b> debe contener los <b>códigos de producto</b> (uno por columna, a partir de la columna B).</li>
-              <li>La <b>primera columna</b> debe contener los <b>nombres de las especificaciones técnicas</b> (una por fila, a partir de la fila 2).</li>
-              <li>Las celdas deben contener los valores de cada especificación para cada producto.</li>
-              <li>Deje las celdas vacías si no tiene información para una especificación (no use 'N/A', 'null' ni guiones).</li>
-              <li>Las fechas deben estar en formato <b>YYYY-MM-DD</b>.</li>
-              <li>Los números decimales deben usar <b>punto</b> como separador (ejemplo: 12.5).</li>
-              <li>Las dimensiones deben ser <b>números enteros</b> (sin decimales).</li>
-              <li>Los <b>códigos de producto</b> deben existir previamente en el sistema.</li>
-              <li>Revise que el archivo no esté protegido ni tenga hojas ocultas.</li>
-              <li>Si ocurre un error, revise el mensaje detallado y corrija el archivo antes de volver a intentar.</li>
-            </ul>
-          </p>
-
-          {/* Grupo de Botones para Descargar Plantillas */}
+          {/* Botones de descarga de plantilla arriba de las recomendaciones */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-            {/* Botón Descargar Plantilla de Equipos (XLSX) - Estilo Azul Principal */}
             <button 
-              style={{...buttonStyle, backgroundColor: '#3b82f6'}} // Azul, sin flexGrow
-              onClick={handleDownloadTemplate}
+              style={{...buttonStyle, backgroundColor: '#3b82f6'}}
+              onClick={() => { handleDownloadTemplate(); setPlantillaSeleccionada('equipos'); }}
             >
-              <Download size={16} />
-              Descargar Plantilla Equipos (XLSX)
+              <Download size={16} /> Descargar Plantilla Equipos (XLSX)
             </button>
-
-            {/* NUEVO Botón Descargar Plantilla de Especificaciones (CSV) - Estilo Verde o similar */}
             <button 
-              style={{...buttonStyle, backgroundColor: '#10b981'}} // Verde, sin flexGrow
-              onClick={handleDownloadSpecificationsTemplate}
+              style={{...buttonStyle, backgroundColor: '#10b981'}}
+              onClick={() => { handleDownloadSpecificationsTemplate(); setPlantillaSeleccionada('especificaciones'); }}
             >
-              <FileSpreadsheet size={16} />
-              Descargar Plantilla Especificaciones (CSV)
+              <FileSpreadsheet size={16} /> Descargar Plantilla Especificaciones (CSV)
             </button>
           </div>
-          
+          <div style={descriptionStyle}>
+            <p>
+              Utilice esta sección para cargar nuevos equipos o actualizar las especificaciones técnicas de equipos existentes mediante la plantilla correspondiente. Descargue la plantilla, complete los datos siguiendo las instrucciones y suba el archivo.
+            </p>
+            {plantillaSeleccionada === null && (
+              <p style={{ color: '#64748b', fontSize: '14px' }}>Seleccione una plantilla para ver las recomendaciones específicas.</p>
+            )}
+            {plantillaSeleccionada === 'equipos' && (
+              <>
+                <b>Recomendaciones para Plantilla de Equipos:</b>
+                <ul style={{marginTop: '8px', lineHeight: '1.5'}}>
+                  <li>El archivo debe ser <b>.xlsx, .xls o .csv</b> y no superar los <b>10MB</b>.</li>
+                  <li>La <b>primera fila</b> debe contener los nombres de los campos (ejemplo: código_producto, nombre_producto, modelo, etc.).</li>
+                  <li>Cada fila a partir de la segunda representa un equipo nuevo.</li>
+                  <li>Complete todos los campos obligatorios para cada equipo.</li>
+                  <li>Las fechas deben estar en formato <b>YYYY-MM-DD</b>.</li>
+                  <li>Los números decimales deben usar <b>punto</b> como separador (ejemplo: 12.5).</li>
+                  <li>Las dimensiones deben ser <b>números enteros</b> (sin decimales).</li>
+                  <li>Los <b>códigos de producto</b> deben ser únicos y no repetirse.</li>
+                  <li>Revise que el archivo no esté protegido ni tenga hojas ocultas.</li>
+                  <li>Si ocurre un error, revise el mensaje detallado y corrija el archivo antes de volver a intentar.</li>
+                </ul>
+              </>
+            )}
+            {plantillaSeleccionada === 'especificaciones' && (
+              <>
+                <b>Recomendaciones para Plantilla de Especificaciones Técnicas:</b>
+                <ul style={{marginTop: '8px', lineHeight: '1.5'}}>
+                  <li>El archivo debe ser <b>.xlsx, .xls o .csv</b> y no superar los <b>10MB</b>.</li>
+                  <li>La <b>primera fila</b> debe contener los <b>códigos de producto</b> (uno por columna, a partir de la columna B).</li>
+                  <li>La <b>primera columna</b> debe contener los <b>nombres de las especificaciones técnicas</b> (una por fila, a partir de la fila 2).</li>
+                  <li>Las celdas deben contener los valores de cada especificación para cada producto.</li>
+                  <li>Deje las celdas vacías si no tiene información para una especificación (no use 'N/A', 'null' ni guiones).</li>
+                  <li>Las fechas deben estar en formato <b>YYYY-MM-DD</b>.</li>
+                  <li>Los números decimales deben usar <b>punto</b> como separador (ejemplo: 12.5).</li>
+                  <li>Las dimensiones deben ser <b>números enteros</b> (sin decimales).</li>
+                  <li>Los <b>códigos de producto</b> deben existir previamente en el sistema.</li>
+                  <li>Revise que el archivo no esté protegido ni tenga hojas ocultas.</li>
+                  <li>Si ocurre un error, revise el mensaje detallado y corrija el archivo antes de volver a intentar.</li>
+                </ul>
+              </>
+            )}
+          </div>
+
           {/* Zona de Carga */}
           <div style={uploadZoneStyle}>
             <h4 style={{ marginTop: 0, marginBottom: '10px', fontWeight: 600, fontSize: '15px' }}>1. Seleccione el tipo de carga:</h4>
