@@ -373,18 +373,30 @@ export default function CargaEquiposPanel() {
     formData.append(fileNameInForm, selectedFile);
 
     try {
+      console.log('Enviando archivo:', selectedFile.name, 'tipo:', selectedFile.type, 'tamaño:', selectedFile.size);
+      
       const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
-        // No establecer Content-Type manualmente, dejar que el navegador lo haga con el boundary correcto
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error del servidor: ${response.status}`);
+      // Intentar obtener el cuerpo de la respuesta como texto primero
+      const responseText = await response.text();
+      console.log('Respuesta del servidor (texto):', responseText);
+
+      let result;
+      try {
+        // Intentar parsear la respuesta como JSON
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Error al parsear respuesta como JSON:', e);
+        result = { message: responseText };
       }
 
-      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || `Error del servidor: ${response.status} - ${responseText}`);
+      }
+
       setUploadStatus({ 
         type: 'success', 
         message: 'Archivo procesado correctamente',
