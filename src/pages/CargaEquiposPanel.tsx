@@ -351,6 +351,13 @@ export default function CargaEquiposPanel() {
       return;
     }
 
+    // Verificar el tipo de archivo
+    const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase();
+    if (!fileExtension || !['xlsx', 'xls', 'csv'].includes(fileExtension)) {
+      setUploadStatus({ type: 'error', message: 'Por favor, seleccione un archivo Excel (.xlsx, .xls) o CSV (.csv).' });
+      return;
+    }
+
     setUploadStatus({ type: 'uploading', message: 'Subiendo y procesando archivo...' });
 
     const formData = new FormData();
@@ -370,23 +377,25 @@ export default function CargaEquiposPanel() {
       return;
     }
 
-    // Añadir el archivo al FormData con el nombre correcto
-    formData.append(fileNameInForm, selectedFile);
+    // Añadir el archivo al FormData con el nombre correcto y el tipo de contenido
+    formData.append(fileNameInForm, selectedFile, selectedFile.name);
+    
+    // Añadir el tipo de archivo como un campo adicional
+    formData.append('fileType', fileExtension);
 
     try {
       console.log('Enviando archivo:', {
         nombre: selectedFile.name,
         tipo: selectedFile.type,
         tamaño: selectedFile.size,
+        extension: fileExtension,
         nombreCampo: fileNameInForm
       });
       
       const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
-        // No establecer Content-Type, dejar que el navegador lo maneje
         headers: {
-          // No incluir Content-Type aquí, el navegador lo establecerá automáticamente con el boundary correcto
           'Accept': 'application/json'
         }
       });
