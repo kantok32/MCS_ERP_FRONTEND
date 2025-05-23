@@ -595,9 +595,167 @@ export default function CargaEquiposPanel() {
     <div style={panelStyle}>
       <h1 style={titleStyle}>Carga de Equipos</h1>
 
-      {/* Action Buttons */}
-      <div style={actionButtonsStyle}>
-        <div></div>
+      {/* Sección de Carga Masiva */}
+      <div style={sectionStyle}>
+        <div>
+          <p style={descriptionStyle}>
+            Utilice esta sección para <b>actualizar las especificaciones técnicas de equipos existentes</b> mediante la plantilla correspondiente. Descargue la plantilla, complete los datos siguiendo las instrucciones y suba el archivo. <br /><br />
+            <b>Recomendaciones:</b>
+            <ul style={{marginTop: '8px', lineHeight: '1.5'}}>
+              <li>El archivo debe ser <b>.xlsx, .xls o .csv</b> y no superar los <b>10MB</b>.</li>
+              <li>La <b>primera fila</b> debe contener los <b>códigos de producto</b> (uno por columna, a partir de la columna B).</li>
+              <li>La <b>primera columna</b> debe contener los <b>nombres de las especificaciones técnicas</b> (una por fila, a partir de la fila 2).</li>
+              <li>Las celdas deben contener los valores de cada especificación para cada producto.</li>
+              <li>Deje las celdas vacías si no tiene información para una especificación (no use 'N/A', 'null' ni guiones).</li>
+              <li>Las fechas deben estar en formato <b>YYYY-MM-DD</b>.</li>
+              <li>Los números decimales deben usar <b>punto</b> como separador (ejemplo: 12.5).</li>
+              <li>Las dimensiones deben ser <b>números enteros</b> (sin decimales).</li>
+              <li>Los <b>códigos de producto</b> deben existir previamente en el sistema.</li>
+              <li>Revise que el archivo no esté protegido ni tenga hojas ocultas.</li>
+              <li>Si ocurre un error, revise el mensaje detallado y corrija el archivo antes de volver a intentar.</li>
+            </ul>
+          </p>
+
+          {/* Grupo de Botones para Descargar Plantillas */}
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+            {/* Botón Descargar Plantilla de Equipos (XLSX) - Estilo Azul Principal */}
+            <button 
+              style={{...buttonStyle, backgroundColor: '#3b82f6'}} // Azul, sin flexGrow
+              onClick={handleDownloadTemplate}
+            >
+              <Download size={16} />
+              Descargar Plantilla Equipos (XLSX)
+            </button>
+
+            {/* NUEVO Botón Descargar Plantilla de Especificaciones (CSV) - Estilo Verde o similar */}
+            <button 
+              style={{...buttonStyle, backgroundColor: '#10b981'}} // Verde, sin flexGrow
+              onClick={handleDownloadSpecificationsTemplate}
+            >
+              <FileSpreadsheet size={16} />
+              Descargar Plantilla Especificaciones (CSV)
+            </button>
+          </div>
+          
+          {/* Zona de Carga */}
+          <div style={uploadZoneStyle}>
+            <h4 style={{ marginTop: 0, marginBottom: '10px', fontWeight: 600, fontSize: '15px' }}>1. Seleccione el tipo de carga:</h4>
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding:'8px', borderRadius:'4px', backgroundColor: uploadType === 'plain' ? '#e0f2fe' : 'transparent'}}>
+                <input 
+                  type="radio" 
+                  name="uploadType" 
+                  value="plain" 
+                  checked={uploadType === 'plain'}
+                  onChange={() => setUploadType('plain')} 
+                  style={{ marginRight: '8px' }}
+                />
+                <FileSpreadsheet size={18} style={{marginRight: '5px'}}/>
+                Cargar Nuevos Equipos (Plantilla General)
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding:'8px', borderRadius:'4px', backgroundColor: uploadType === 'matrix' ? '#e0f2fe' : 'transparent' }}>
+                <input 
+                  type="radio" 
+                  name="uploadType" 
+                  value="matrix" 
+                  checked={uploadType === 'matrix'}
+                  onChange={() => setUploadType('matrix')} 
+                  style={{ marginRight: '8px' }}
+                />
+                <Table2 size={18} style={{marginRight: '5px'}}/>
+                Actualizar Especificaciones (Formato Matricial)
+              </label>
+            </div>
+             <p style={{fontSize: '12px', color: '#64748b', marginTop: '10px'}}>
+              {uploadType === 'plain' 
+                ? "Use la 'Plantilla General (XLSX)' para crear nuevos equipos o actualizar su información básica (nombre, modelo, dimensiones, etc.)."
+                : "Use la 'Plantilla Especificaciones (CSV)' para actualizar únicamente las especificaciones técnicas de equipos existentes mediante un formato matricial (Código Producto vs Nombre Especificación)."
+              }
+            </p>
+            <UploadCloud size={38} style={{ marginBottom: '12px', color: '#94a3b8' }} />
+            <p style={{...descriptionStyle, marginBottom: '18px'}}>
+              {selectedFile ? `Archivo seleccionado: ${selectedFile.name}` : 'Arrastre aquí su archivo o haga clic para seleccionarlo.'}
+              <br />
+              Formatos soportados: .xlsx, .xls, .csv
+            </p>
+            {/* Input de archivo oculto y botón visible */}
+            <input 
+              type="file" 
+              id="bulk-upload-input" 
+              style={{ display: 'none' }} 
+              accept=".xlsx, .xls, .csv" 
+              onChange={handleFileChange} 
+            />
+            <label htmlFor="bulk-upload-input" style={{...buttonStyle, cursor: 'pointer', backgroundColor: '#64748b', marginRight: '12px'}}>
+              <FileText size={16} />
+              Seleccionar Archivo
+            </label>
+            <button 
+              style={selectedFile && uploadStatus.type !== 'uploading' ? buttonStyle : disabledButtonStyle} 
+              onClick={handleBulkUpload} 
+              disabled={!selectedFile || uploadStatus.type === 'uploading'}
+            >
+              {uploadStatus.type === 'uploading' ? 'Cargando...' : 'Cargar Archivo'}
+            </button>
+          </div>
+
+          {/* Mensajes de Estado/Resultado Carga Masiva */}
+          {uploadStatus.type === 'uploading' && (
+            <div style={loadingStatusStyle}>{uploadStatus.message}</div>
+          )}
+          {uploadStatus.type === 'success' && (
+            <div style={successStatusStyle}>
+              <CheckCircle size={16} /> {uploadStatus.message}
+            </div>
+          )}
+          {uploadStatus.type === 'error' && (
+            <div style={errorStatusStyle}>
+              <AlertCircle size={16} /> {uploadStatus.message}
+            </div>
+          )}
+          
+          {/* Mostrar Resumen detallado en caso de éxito o error con summary */}
+          {uploadStatus.summary && (
+            <div style={{ marginTop: '15px', padding: '15px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc' }}>
+              <h4 style={{ marginBottom: '10px', fontWeight: 600 }}>Resumen de la Carga:</h4>
+              <ul style={{ listStyle: 'disc', paddingLeft: '20px' }}>
+                <li>Filas en Excel: {uploadStatus.summary.totalRowsInExcel ?? 'N/A'}</li>
+                <li>Filas Procesadas: {uploadStatus.summary.rowsProcessed ?? 'N/A'}</li>
+                <li>Insertados: {uploadStatus.summary.inserted ?? 0}</li>
+                <li>Actualizados: {uploadStatus.summary.updated ?? 0}</li>
+                <li>Filas con Errores: {uploadStatus.summary.rowsWithErrors ?? 0}</li>
+              </ul>
+              {uploadStatus.summary.errors && uploadStatus.summary.errors.length > 0 && (
+                <div style={{ marginTop: '10px' }}>
+                  <h5 style={{ marginBottom: '5px', fontWeight: 600 }}>Detalle de Errores:</h5>
+                  <ul style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #fee2e2', padding: '10px', borderRadius: '4px' }}>
+                    {uploadStatus.summary.errors.map((err: any, index: number) => (
+                      <li key={index} style={{ marginBottom: '5px' }}>
+                        <strong>{err.codigo ? `Código ${err.codigo}:` : 'Fila sin código:'}</strong> {err.message}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{fontSize: '13px', color: '#64748b'}}>
+            <strong>Notas importantes:</strong>
+            <ul style={{marginTop: '8px', lineHeight: '1.5'}}>
+              <li>Los archivos no deben exceder 10MB</li>
+              <li>Todas las fechas deben estar en formato YYYY-MM-DD</li>
+              <li>Los números decimales deben usar punto como separador</li>
+              <li>Los campos vacíos deben dejarse en blanco, no usar 'N/A' o "null"</li>
+              <li>Las dimensiones deben ser números enteros</li>
+              <li>Los códigos de producto deben ser únicos (para plantilla general) o existentes (para plantilla de especificaciones).</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Botón Agregar Equipo Individual al final de la página */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '32px' }}>
         <motion.button 
           style={buttonStyle} 
           onClick={() => setShowModal(true)}
@@ -776,166 +934,6 @@ export default function CargaEquiposPanel() {
               </button>
             </div>
           </form>
-        </div>
-      </div>
-
-      {/* Sección de Carga Masiva */}
-      <div style={sectionStyle}>
-        <div style={cardStyle}>
-          <h2 style={subtitleStyle}>Carga Masiva de Equipos</h2>
-          <p style={descriptionStyle}>
-            Utilice esta sección para <b>actualizar las especificaciones técnicas de equipos existentes</b> mediante la plantilla correspondiente. Descargue la plantilla, complete los datos siguiendo las instrucciones y suba el archivo. <br /><br />
-            <b>Recomendaciones:</b>
-            <ul style={{marginTop: '8px', lineHeight: '1.5'}}>
-              <li>El archivo debe ser <b>.xlsx, .xls o .csv</b> y no superar los <b>10MB</b>.</li>
-              <li>La <b>primera fila</b> debe contener los <b>códigos de producto</b> (uno por columna, a partir de la columna B).</li>
-              <li>La <b>primera columna</b> debe contener los <b>nombres de las especificaciones técnicas</b> (una por fila, a partir de la fila 2).</li>
-              <li>Las celdas deben contener los valores de cada especificación para cada producto.</li>
-              <li>Deje las celdas vacías si no tiene información para una especificación (no use 'N/A', 'null' ni guiones).</li>
-              <li>Las fechas deben estar en formato <b>YYYY-MM-DD</b>.</li>
-              <li>Los números decimales deben usar <b>punto</b> como separador (ejemplo: 12.5).</li>
-              <li>Las dimensiones deben ser <b>números enteros</b> (sin decimales).</li>
-              <li>Los <b>códigos de producto</b> deben existir previamente en el sistema.</li>
-              <li>Revise que el archivo no esté protegido ni tenga hojas ocultas.</li>
-              <li>Si ocurre un error, revise el mensaje detallado y corrija el archivo antes de volver a intentar.</li>
-            </ul>
-          </p>
-
-          {/* Grupo de Botones para Descargar Plantillas */}
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-            {/* Botón Descargar Plantilla de Equipos (XLSX) - Estilo Azul Principal */}
-            <button 
-              style={{...buttonStyle, backgroundColor: '#3b82f6'}} // Azul, sin flexGrow
-              onClick={handleDownloadTemplate}
-            >
-              <Download size={16} />
-              Descargar Plantilla Equipos (XLSX)
-            </button>
-
-            {/* NUEVO Botón Descargar Plantilla de Especificaciones (CSV) - Estilo Verde o similar */}
-            <button 
-              style={{...buttonStyle, backgroundColor: '#10b981'}} // Verde, sin flexGrow
-              onClick={handleDownloadSpecificationsTemplate}
-            >
-              <FileSpreadsheet size={16} />
-              Descargar Plantilla Especificaciones (CSV)
-            </button>
-          </div>
-          
-          {/* Zona de Carga */}
-          <div style={uploadZoneStyle}>
-            <h4 style={{ marginTop: 0, marginBottom: '10px', fontWeight: 600, fontSize: '15px' }}>1. Seleccione el tipo de carga:</h4>
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding:'8px', borderRadius:'4px', backgroundColor: uploadType === 'plain' ? '#e0f2fe' : 'transparent'}}>
-                <input 
-                  type="radio" 
-                  name="uploadType" 
-                  value="plain" 
-                  checked={uploadType === 'plain'}
-                  onChange={() => setUploadType('plain')} 
-                  style={{ marginRight: '8px' }}
-                />
-                <FileSpreadsheet size={18} style={{marginRight: '5px'}}/>
-                Cargar Nuevos Equipos (Plantilla General)
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding:'8px', borderRadius:'4px', backgroundColor: uploadType === 'matrix' ? '#e0f2fe' : 'transparent' }}>
-                <input 
-                  type="radio" 
-                  name="uploadType" 
-                  value="matrix" 
-                  checked={uploadType === 'matrix'}
-                  onChange={() => setUploadType('matrix')} 
-                  style={{ marginRight: '8px' }}
-                />
-                <Table2 size={18} style={{marginRight: '5px'}}/>
-                Actualizar Especificaciones (Formato Matricial)
-              </label>
-            </div>
-             <p style={{fontSize: '12px', color: '#64748b', marginTop: '10px'}}>
-              {uploadType === 'plain' 
-                ? "Use la 'Plantilla General (XLSX)' para crear nuevos equipos o actualizar su información básica (nombre, modelo, dimensiones, etc.)."
-                : "Use la 'Plantilla Especificaciones (CSV)' para actualizar únicamente las especificaciones técnicas de equipos existentes mediante un formato matricial (Código Producto vs Nombre Especificación)."
-              }
-            </p>
-            <UploadCloud size={38} style={{ marginBottom: '12px', color: '#94a3b8' }} />
-            <p style={{...descriptionStyle, marginBottom: '18px'}}>
-              {selectedFile ? `Archivo seleccionado: ${selectedFile.name}` : 'Arrastre aquí su archivo o haga clic para seleccionarlo.'}
-              <br />
-              Formatos soportados: .xlsx, .xls, .csv
-            </p>
-            {/* Input de archivo oculto y botón visible */}
-            <input 
-              type="file" 
-              id="bulk-upload-input" 
-              style={{ display: 'none' }} 
-              accept=".xlsx, .xls, .csv" 
-              onChange={handleFileChange} 
-            />
-            <label htmlFor="bulk-upload-input" style={{...buttonStyle, cursor: 'pointer', backgroundColor: '#64748b', marginRight: '12px'}}>
-              <FileText size={16} />
-              Seleccionar Archivo
-            </label>
-            <button 
-              style={selectedFile && uploadStatus.type !== 'uploading' ? buttonStyle : disabledButtonStyle} 
-              onClick={handleBulkUpload} 
-              disabled={!selectedFile || uploadStatus.type === 'uploading'}
-            >
-              {uploadStatus.type === 'uploading' ? 'Cargando...' : 'Cargar Archivo'}
-            </button>
-          </div>
-
-          {/* Mensajes de Estado/Resultado Carga Masiva */}
-          {uploadStatus.type === 'uploading' && (
-            <div style={loadingStatusStyle}>{uploadStatus.message}</div>
-          )}
-          {uploadStatus.type === 'success' && (
-            <div style={successStatusStyle}>
-              <CheckCircle size={16} /> {uploadStatus.message}
-            </div>
-          )}
-          {uploadStatus.type === 'error' && (
-            <div style={errorStatusStyle}>
-              <AlertCircle size={16} /> {uploadStatus.message}
-            </div>
-          )}
-          
-          {/* Mostrar Resumen detallado en caso de éxito o error con summary */}
-          {uploadStatus.summary && (
-            <div style={{ marginTop: '15px', padding: '15px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc' }}>
-              <h4 style={{ marginBottom: '10px', fontWeight: 600 }}>Resumen de la Carga:</h4>
-              <ul style={{ listStyle: 'disc', paddingLeft: '20px' }}>
-                <li>Filas en Excel: {uploadStatus.summary.totalRowsInExcel ?? 'N/A'}</li>
-                <li>Filas Procesadas: {uploadStatus.summary.rowsProcessed ?? 'N/A'}</li>
-                <li>Insertados: {uploadStatus.summary.inserted ?? 0}</li>
-                <li>Actualizados: {uploadStatus.summary.updated ?? 0}</li>
-                <li>Filas con Errores: {uploadStatus.summary.rowsWithErrors ?? 0}</li>
-              </ul>
-              {uploadStatus.summary.errors && uploadStatus.summary.errors.length > 0 && (
-                <div style={{ marginTop: '10px' }}>
-                  <h5 style={{ marginBottom: '5px', fontWeight: 600 }}>Detalle de Errores:</h5>
-                  <ul style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #fee2e2', padding: '10px', borderRadius: '4px' }}>
-                    {uploadStatus.summary.errors.map((err: any, index: number) => (
-                      <li key={index} style={{ marginBottom: '5px' }}>
-                        <strong>{err.codigo ? `Código ${err.codigo}:` : 'Fila sin código:'}</strong> {err.message}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div style={{fontSize: '13px', color: '#64748b'}}>
-            <strong>Notas importantes:</strong>
-            <ul style={{marginTop: '8px', lineHeight: '1.5'}}>
-              <li>Los archivos no deben exceder 10MB</li>
-              <li>Todas las fechas deben estar en formato YYYY-MM-DD</li>
-              <li>Los números decimales deben usar punto como separador</li>
-              <li>Los campos vacíos deben dejarse en blanco, no usar 'N/A' o "null"</li>
-              <li>Las dimensiones deben ser números enteros</li>
-              <li>Los códigos de producto deben ser únicos (para plantilla general) o existentes (para plantilla de especificaciones).</li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>
