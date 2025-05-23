@@ -329,10 +329,9 @@ export default function CargaEquiposPanel() {
 
   // --- Lógica para descargar la plantilla de carga masiva PLANA (Equipos) ---
   const handleDownloadTemplate = () => {
-    // Asume que tienes una forma de obtener la URL base de la API, ej. process.env.REACT_APP_API_URL
-    // o si el frontend y backend están en el mismo dominio, puedes usar una ruta relativa.
-    const templateUrl = `/api/products/download-template`;
-    window.location.href = templateUrl; // Inicia la descarga
+    // Usar la URL absoluta del backend para evitar problemas de rutas en producción y desarrollo
+    const templateUrl = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/download-template';
+    window.open(templateUrl, '_blank'); // Inicia la descarga en una nueva pestaña
   };
 
   // --- Lógica para descargar la plantilla de carga masiva MATRICIAL (Especificaciones CSV) ---
