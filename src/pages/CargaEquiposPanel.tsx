@@ -784,7 +784,21 @@ export default function CargaEquiposPanel() {
         <div style={cardStyle}>
           <h2 style={subtitleStyle}>Carga Masiva de Equipos</h2>
           <p style={descriptionStyle}>
-            Utilice esta sección para cargar nuevos equipos o actualizar especificaciones existentes mediante plantillas. Descargue la plantilla correspondiente, complete los datos y suba el archivo.
+            Utilice esta sección para <b>actualizar las especificaciones técnicas de equipos existentes</b> mediante la plantilla correspondiente. Descargue la plantilla, complete los datos siguiendo las instrucciones y suba el archivo. <br /><br />
+            <b>Recomendaciones:</b>
+            <ul style={{marginTop: '8px', lineHeight: '1.5'}}>
+              <li>El archivo debe ser <b>.xlsx, .xls o .csv</b> y no superar los <b>10MB</b>.</li>
+              <li>La <b>primera fila</b> debe contener los <b>códigos de producto</b> (uno por columna, a partir de la columna B).</li>
+              <li>La <b>primera columna</b> debe contener los <b>nombres de las especificaciones técnicas</b> (una por fila, a partir de la fila 2).</li>
+              <li>Las celdas deben contener los valores de cada especificación para cada producto.</li>
+              <li>Deje las celdas vacías si no tiene información para una especificación (no use 'N/A', 'null' ni guiones).</li>
+              <li>Las fechas deben estar en formato <b>YYYY-MM-DD</b>.</li>
+              <li>Los números decimales deben usar <b>punto</b> como separador (ejemplo: 12.5).</li>
+              <li>Las dimensiones deben ser <b>números enteros</b> (sin decimales).</li>
+              <li>Los <b>códigos de producto</b> deben existir previamente en el sistema.</li>
+              <li>Revise que el archivo no esté protegido ni tenga hojas ocultas.</li>
+              <li>Si ocurre un error, revise el mensaje detallado y corrija el archivo antes de volver a intentar.</li>
+            </ul>
           </p>
 
           {/* Grupo de Botones para Descargar Plantillas */}
