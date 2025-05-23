@@ -115,6 +115,10 @@ export default function CargaEquiposPanel() {
   // Estado para mostrar recomendaciones según plantilla seleccionada
   const [plantillaSeleccionada, setPlantillaSeleccionada] = useState<'equipos' | 'especificaciones' | null>(null);
 
+  // Estado para resultado y error de carga
+  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   // --- Manejadores de Input --- 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -349,6 +353,46 @@ export default function CargaEquiposPanel() {
     }
   };
 
+  // Función para carga de equipos (formato tabla)
+  const handleUploadEquipos = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('archivoExcelPlain', file);
+      const response = await fetch('/api/products/upload-plain', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Error al cargar el archivo');
+      }
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  // Función para carga de especificaciones (formato matricial)
+  const handleUploadSpecs = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch('/api/products/upload-specifications', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Error al cargar el archivo');
+      }
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const handleBulkUpload = async () => {
     if (!selectedFile) {
       setUploadStatus({ type: 'error', message: 'Por favor, seleccione un archivo.' });
@@ -367,46 +411,26 @@ export default function CargaEquiposPanel() {
     }
 
     setUploadStatus({ type: 'uploading', message: 'Subiendo y procesando archivo...' });
-
-    const formData = new FormData();
-    let endpoint = '';
-    let fieldName = '';
-
-    if (uploadType === 'plain') {
-      endpoint = '/api/products/upload-plain';
-      fieldName = 'archivoExcelPlain';
-    } else if (uploadType === 'matrix') {
-      endpoint = '/api/products/upload-specifications';
-      fieldName = 'file';
-    } else {
-      setUploadStatus({ type: 'error', message: 'Tipo de carga no reconocido.' });
-      return;
-    }
-
-    formData.append(fieldName, selectedFile, selectedFile.name);
+    setUploadResult(null);
+    setUploadError(null);
 
     try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        body: formData,
-      });
-      const responseText = await response.text();
       let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (e) {
-        throw new Error(responseText);
+      if (uploadType === 'plain') {
+        data = await handleUploadEquipos(selectedFile);
+      } else if (uploadType === 'matrix') {
+        data = await handleUploadSpecs(selectedFile);
+      } else {
+        throw new Error('Tipo de carga no reconocido.');
       }
-      if (!response.ok) {
-        throw new Error(data.message || 'Error del servidor');
-      }
-      setUploadStatus({ type: 'success', message: 'Archivo procesado correctamente.', summary: data });
+      setUploadStatus({ type: 'success', message: data.message || 'Archivo procesado correctamente.', summary: data.summary });
+      setUploadResult(data);
       setSelectedFile(null);
-    } catch (error) {
-      setUploadStatus({ type: 'error', message: error instanceof Error ? error.message : 'Error desconocido' });
+    } catch (error: any) {
+      setUploadStatus({ type: 'error', message: error.message || 'Error desconocido' });
+      setUploadError(error.message || 'Error desconocido');
     }
   };
-  // <<<------------------------------------>>>
 
   const panelStyle: React.CSSProperties = {
     // Removido padding aquí para confiar en el padding de App.tsx
@@ -729,29 +753,23 @@ export default function CargaEquiposPanel() {
             </div>
           )}
           
-          {/* Mostrar Resumen detallado en caso de éxito o error con summary */}
-          {uploadStatus.summary && (
-            <div style={{ marginTop: '15px', padding: '15px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc' }}>
-              <h4 style={{ marginBottom: '10px', fontWeight: 600 }}>Resumen de la Carga:</h4>
-              <ul style={{ listStyle: 'disc', paddingLeft: '20px' }}>
-                <li>Filas en Excel: {uploadStatus.summary.totalRowsInExcel ?? 'N/A'}</li>
-                <li>Filas Procesadas: {uploadStatus.summary.rowsProcessed ?? 'N/A'}</li>
-                <li>Insertados: {uploadStatus.summary.inserted ?? 0}</li>
-                <li>Actualizados: {uploadStatus.summary.updated ?? 0}</li>
-                <li>Filas con Errores: {uploadStatus.summary.rowsWithErrors ?? 0}</li>
-              </ul>
-              {uploadStatus.summary.errors && uploadStatus.summary.errors.length > 0 && (
-                <div style={{ marginTop: '10px' }}>
-                  <h5 style={{ marginBottom: '5px', fontWeight: 600 }}>Detalle de Errores:</h5>
-                  <ul style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #fee2e2', padding: '10px', borderRadius: '4px' }}>
-                    {uploadStatus.summary.errors.map((err: any, index: number) => (
-                      <li key={index} style={{ marginBottom: '5px' }}>
-                        <strong>{err.codigo ? `Código ${err.codigo}:` : 'Fila sin código:'}</strong> {err.message}
-                      </li>
-                    ))}
-                  </ul>
+          {/* Mostrar resultado o error de la carga masiva */}
+          {uploadResult && (
+            <div className="result" style={{ marginTop: '20px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '16px' }}>
+              <h3 style={{ color: '#166534' }}>Resultado:</h3>
+              <p>{uploadResult.message}</p>
+              {uploadResult.summary && (
+                <div>
+                  <h4>Resumen:</h4>
+                  <pre style={{ background: '#e0f2fe', padding: '10px', borderRadius: '4px', fontSize: '13px' }}>{JSON.stringify(uploadResult.summary, null, 2)}</pre>
                 </div>
               )}
+            </div>
+          )}
+          {uploadError && (
+            <div className="error" style={{ marginTop: '20px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '16px' }}>
+              <h3 style={{ color: '#991b1b' }}>Error:</h3>
+              <p>{uploadError}</p>
             </div>
           )}
 
