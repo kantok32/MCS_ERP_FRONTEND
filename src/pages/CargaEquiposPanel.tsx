@@ -347,7 +347,7 @@ export default function CargaEquiposPanel() {
 
   const handleBulkUpload = async () => {
     if (!selectedFile) {
-      setUploadStatus({ type: 'error', message: 'Por favor, seleccione un archivo Excel.' });
+      setUploadStatus({ type: 'error', message: 'Por favor, seleccione un archivo.' });
       return;
     }
 
@@ -363,17 +363,22 @@ export default function CargaEquiposPanel() {
       console.log('Iniciando carga PLANA (Nuevos Equipos) al endpoint:', endpoint);
     } else if (uploadType === 'matrix') {
       endpoint = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/upload-specifications';
-      fileNameInForm = 'file'; // Cambiado a 'file' para coincidir con lo que espera el backend
+      fileNameInForm = 'file';
       console.log('Iniciando carga MATRICIAL (Actualizar Especificaciones) al endpoint:', endpoint);
     } else {
       setUploadStatus({ type: 'error', message: 'Tipo de carga no reconocido.' });
       return;
     }
 
-    formData.append(fileNameInForm, selectedFile);
+    // Añadir el archivo al FormData
+    formData.append(fileNameInForm, selectedFile, selectedFile.name);
+    
+    // Añadir el tipo de archivo al FormData
+    const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase();
+    formData.append('fileType', fileExtension || '');
 
     try {
-      console.log('Enviando archivo:', selectedFile.name, 'tipo:', selectedFile.type, 'tamaño:', selectedFile.size);
+      console.log('Enviando archivo:', selectedFile.name, 'tipo:', selectedFile.type, 'tamaño:', selectedFile.size, 'extensión:', fileExtension);
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -848,16 +853,16 @@ export default function CargaEquiposPanel() {
             </p>
             <UploadCloud size={38} style={{ marginBottom: '12px', color: '#94a3b8' }} />
             <p style={{...descriptionStyle, marginBottom: '18px'}}>
-              {selectedFile ? `Archivo seleccionado: ${selectedFile.name}` : 'Arrastre aquí su archivo Excel o haga clic para seleccionarlo.'}
+              {selectedFile ? `Archivo seleccionado: ${selectedFile.name}` : 'Arrastre aquí su archivo o haga clic para seleccionarlo.'}
               <br />
-              Formatos soportados: .xlsx, .xls
+              Formatos soportados: .xlsx, .xls, .csv
             </p>
             {/* Input de archivo oculto y botón visible */}
             <input 
               type="file" 
               id="bulk-upload-input" 
               style={{ display: 'none' }} 
-              accept=".xlsx, .xls" 
+              accept=".xlsx, .xls, .csv" 
               onChange={handleFileChange} 
             />
             <label htmlFor="bulk-upload-input" style={{...buttonStyle, cursor: 'pointer', backgroundColor: '#64748b', marginRight: '12px'}}>
