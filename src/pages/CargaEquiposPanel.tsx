@@ -370,19 +370,25 @@ export default function CargaEquiposPanel() {
       return;
     }
 
-    // Añadir el archivo al FormData
-    formData.append(fileNameInForm, selectedFile, selectedFile.name);
-    
-    // Añadir el tipo de archivo al FormData
-    const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase();
-    formData.append('fileType', fileExtension || '');
+    // Añadir el archivo al FormData con el nombre correcto
+    formData.append(fileNameInForm, selectedFile);
 
     try {
-      console.log('Enviando archivo:', selectedFile.name, 'tipo:', selectedFile.type, 'tamaño:', selectedFile.size, 'extensión:', fileExtension);
+      console.log('Enviando archivo:', {
+        nombre: selectedFile.name,
+        tipo: selectedFile.type,
+        tamaño: selectedFile.size,
+        nombreCampo: fileNameInForm
+      });
       
       const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
+        // No establecer Content-Type, dejar que el navegador lo maneje
+        headers: {
+          // No incluir Content-Type aquí, el navegador lo establecerá automáticamente con el boundary correcto
+          'Accept': 'application/json'
+        }
       });
 
       // Intentar obtener el cuerpo de la respuesta como texto primero
@@ -395,7 +401,8 @@ export default function CargaEquiposPanel() {
         result = JSON.parse(responseText);
       } catch (e) {
         console.error('Error al parsear respuesta como JSON:', e);
-        result = { message: responseText };
+        // Si no es JSON, mostrar el texto de error directamente
+        throw new Error(responseText);
       }
 
       if (!response.ok) {
