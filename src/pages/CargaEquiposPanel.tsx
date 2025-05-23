@@ -121,6 +121,40 @@ export default function CargaEquiposPanel() {
   const [uploadResult, setUploadResult] = useState<any>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // --- Estado para la opción de pegar datos desde Excel ---
+  const [excelPasteText, setExcelPasteText] = useState('');
+  const [excelPasteJson, setExcelPasteJson] = useState<any[] | null>(null);
+  const [excelPasteError, setExcelPasteError] = useState<string | null>(null);
+  const [excelPasteStatus, setExcelPasteStatus] = useState<'idle' | 'parsing' | 'ready' | 'sending' | 'success' | 'error'>('idle');
+
+  // --- Columnas fijas para la tabla manual ---
+  const columnasFijas = [
+    'codigo_producto',
+    'nombre_producto',
+    'descripcion',
+    'Modelo',
+    'equipo u opcional',
+    'producto',
+    'fecha_cotizacion',
+    'costo fabrica',
+    'largo_mm',
+    'ancho_mm',
+    'alto_mm',
+    'peso_kg',
+  ];
+
+  // --- Estado para la tabla manual ---
+  const [tablaManual, setTablaManual] = useState<any[]>([{
+    codigo_producto: '', nombre_producto: '', descripcion: '', Modelo: '',
+    'equipo u opcional': '', producto: '', fecha_cotizacion: '', 'costo fabrica': '',
+    largo_mm: '', ancho_mm: '', alto_mm: '', peso_kg: ''
+  }]);
+  const [tablaManualStatus, setTablaManualStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [tablaManualError, setTablaManualError] = useState<string | null>(null);
+
+  // --- Estado para selección múltiple de filas en la tabla manual ---
+  const [filasSeleccionadas, setFilasSeleccionadas] = useState<number[]>([]);
+
   // --- Manejadores de Input --- 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -431,6 +465,164 @@ export default function CargaEquiposPanel() {
       setUploadStatus({ type: 'error', message: error.message || 'Error desconocido' });
       setUploadError(error.message || 'Error desconocido');
     }
+  };
+
+  // --- Función para parsear texto tabulado a JSON ---
+  const parseExcelPaste = (text: string) => {
+    setExcelPasteError(null);
+    setExcelPasteStatus('parsing');
+    try {
+      const lines = text.trim().split(/\r?\n/).filter(l => l.trim() !== '');
+      if (lines.length < 2) throw new Error('Debes incluir al menos encabezados y una fila de datos.');
+      const headers = lines[0].split(/\t/).map(h => h.trim());
+      const data = lines.slice(1).map(line => {
+        const values = line.split(/\t/);
+        const obj: Record<string, string> = {};
+        headers.forEach((h, i) => { obj[h] = values[i] || ''; });
+        return obj;
+      });
+      setExcelPasteJson(data);
+      setExcelPasteStatus('ready');
+    } catch (err: any) {
+      setExcelPasteError(err.message || 'Error al parsear los datos.');
+      setExcelPasteJson(null);
+      setExcelPasteStatus('error');
+    }
+  };
+
+  // --- Función para enviar el JSON generado al backend ---
+  const handleSendExcelPaste = async () => {
+    if (!excelPasteJson) return;
+    setExcelPasteStatus('sending');
+    setExcelPasteError(null);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/products/upload-plain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: excelPasteJson }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Error al enviar los datos');
+      setExcelPasteStatus('success');
+      setUploadStatus({ type: 'success', message: result.message || 'Datos enviados correctamente.' });
+      setExcelPasteText('');
+      setExcelPasteJson(null);
+    } catch (err: any) {
+      setExcelPasteStatus('error');
+      setExcelPasteError(err.message || 'Error desconocido al enviar los datos');
+    }
+  };
+
+  const agregarFilaManual = () => {
+    setTablaManual(prev => [
+      ...prev,
+      Object.fromEntries(columnasFijas.map(col => [col, '']))
+    ]);
+  };
+  const eliminarFilaManual = (idx: number) => {
+    setTablaManual(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev);
+  };
+  const actualizarCeldaManual = (rowIdx: number, col: string, value: string) => {
+    // Si es la columna 'codigo_producto' y el valor contiene separadores, crear varias filas
+    if (col === 'codigo_producto' && /[\s,\n]+/.test(value.trim())) {
+      // Separar por espacio, coma o salto de línea
+      const valores = value.split(/[\s,\n]+/).filter(v => v.trim() !== '');
+      if (valores.length > 1) {
+        setTablaManual(prev => {
+          // Crear nuevas filas para cada valor
+          const nuevasFilas = valores.map(val => ({
+            ...Object.fromEntries(columnasFijas.map(c => [c, ''])),
+            codigo_producto: val
+          }));
+          // Reemplazar la fila actual por las nuevas filas
+          return [
+            ...prev.slice(0, rowIdx),
+            ...nuevasFilas,
+            ...prev.slice(rowIdx + 1)
+          ];
+        });
+        return;
+      }
+    }
+    // Comportamiento normal: solo actualizar la celda
+    setTablaManual(prev => prev.map((row, i) => i === rowIdx ? { ...row, [col]: value } : row));
+  };
+  const handleEnviarTablaManual = async () => {
+    setTablaManualStatus('sending');
+    setTablaManualError(null);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/products/upload-plain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: tablaManual }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Error al enviar los datos');
+      setTablaManualStatus('success');
+      setUploadStatus({ type: 'success', message: result.message || 'Datos enviados correctamente.' });
+      setTablaManual([Object.fromEntries(columnasFijas.map(col => [col, '']))]);
+    } catch (err: any) {
+      setTablaManualStatus('error');
+      setTablaManualError(err.message || 'Error desconocido al enviar los datos');
+    }
+  };
+
+  // Seleccionar/deseleccionar una fila
+  const toggleSeleccionFila = (idx: number) => {
+    setFilasSeleccionadas(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
+  };
+  // Seleccionar/deseleccionar todas
+  const toggleSeleccionTodas = () => {
+    if (filasSeleccionadas.length === tablaManual.length) {
+      setFilasSeleccionadas([]);
+    } else {
+      setFilasSeleccionadas(tablaManual.map((_, i) => i));
+    }
+  };
+  // Eliminar filas seleccionadas
+  const eliminarFilasSeleccionadas = () => {
+    setTablaManual(prev => prev.filter((_, i) => !filasSeleccionadas.includes(i)));
+    setFilasSeleccionadas([]);
+  };
+  // Permitir eliminar con Backspace/Delete
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'Backspace' || e.key === 'Delete') && filasSeleccionadas.length > 0) {
+        eliminarFilasSeleccionadas();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [filasSeleccionadas]);
+
+  // --- Soporte para pegado masivo tipo Excel en la tabla manual ---
+  const handlePasteEnCeldaManual = (rowIdx: number, colIdx: number, e: React.ClipboardEvent<HTMLInputElement>) => {
+    const texto = e.clipboardData.getData('text');
+    if (!texto) return;
+    const filasPegadas = texto.split(/\r?\n/).filter(f => f.trim() !== '');
+    const datosPegados = filasPegadas.map(fila => fila.split(/\t/));
+    // Determinar cuántas filas y columnas se van a pegar
+    const numFilas = datosPegados.length;
+    const numColumnas = Math.max(...datosPegados.map(f => f.length));
+    setTablaManual(prev => {
+      let nuevaTabla = [...prev];
+      // Asegurar que haya suficientes filas
+      while (nuevaTabla.length < rowIdx + numFilas) {
+        nuevaTabla.push(Object.fromEntries(columnasFijas.map(c => [c, ''])));
+      }
+      // Pegar los datos
+      for (let i = 0; i < numFilas; i++) {
+        for (let j = 0; j < numColumnas; j++) {
+          const colTargetIdx = colIdx + j;
+          if (colTargetIdx < columnasFijas.length) {
+            const colName = columnasFijas[colTargetIdx];
+            nuevaTabla[rowIdx + i][colName] = datosPegados[i][j] ?? '';
+          }
+        }
+      }
+      return nuevaTabla;
+    });
+    e.preventDefault();
   };
 
   const panelStyle: React.CSSProperties = {
@@ -785,6 +977,64 @@ export default function CargaEquiposPanel() {
               <li>Los códigos de producto deben ser únicos (para plantilla general) o existentes (para plantilla de especificaciones).</li>
             </ul>
           </div>
+        </div>
+      </div>
+
+      {/* Sección de carga manual en tabla */}
+      <div style={{ marginBottom: '32px' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#334155', marginBottom: '10px' }}>3. Cargar productos manualmente en tabla</h3>
+        <div style={uploadZoneStyle}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+              <thead>
+                <tr>
+                  <th style={{ border: '1px solid #cbd5e1', background: '#e0e7ef', padding: '4px 8px', width: '32px' }}>
+                    <input type="checkbox" checked={filasSeleccionadas.length === tablaManual.length && tablaManual.length > 0} onChange={toggleSeleccionTodas} />
+                  </th>
+                  {columnasFijas.map((col) => (
+                    <th key={col} style={{ border: '1px solid #cbd5e1', background: '#e0e7ef', padding: '4px 8px', fontWeight: 600 }}>{col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {tablaManual.map((row, rowIdx) => (
+                  <tr key={rowIdx} style={filasSeleccionadas.includes(rowIdx) ? { background: '#dbeafe' } : {}}>
+                    <td style={{ border: '1px solid #cbd5e1', padding: '4px 8px', textAlign: 'center' }}>
+                      <input type="checkbox" checked={filasSeleccionadas.includes(rowIdx)} onChange={() => toggleSeleccionFila(rowIdx)} />
+                    </td>
+                    {columnasFijas.map((col, colIdx) => (
+                      <td key={colIdx} style={{ border: '1px solid #cbd5e1', padding: '4px 8px' }}>
+                        <input
+                          type="text"
+                          value={row[col]}
+                          style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: '13px' }}
+                          onChange={e => actualizarCeldaManual(rowIdx, col, e.target.value)}
+                          onPaste={e => handlePasteEnCeldaManual(rowIdx, colIdx, e)}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button style={{ ...buttonStyle, marginTop: '10px' }} onClick={agregarFilaManual}>Agregar fila</button>
+          <button
+            style={{ ...buttonStyle, marginTop: '10px', marginLeft: '10px', background: filasSeleccionadas.length > 0 ? '#ef4444' : '#e2e8f0', color: filasSeleccionadas.length > 0 ? 'white' : '#94a3b8', cursor: filasSeleccionadas.length > 0 ? 'pointer' : 'not-allowed' }}
+            onClick={eliminarFilasSeleccionadas}
+            disabled={filasSeleccionadas.length === 0}
+          >
+            Eliminar seleccionados
+          </button>
+          <button
+            style={{ ...buttonStyle, marginTop: '10px', marginLeft: '10px' }}
+            onClick={handleEnviarTablaManual}
+            disabled={tablaManualStatus === 'sending'}
+          >
+            {tablaManualStatus === 'sending' ? 'Enviando...' : 'Enviar'}
+          </button>
+          {tablaManualStatus === 'success' && <div style={successStatusStyle}>¡Datos enviados correctamente!</div>}
+          {tablaManualStatus === 'error' && tablaManualError && <div style={errorStatusStyle}>{tablaManualError}</div>}
         </div>
       </div>
 
