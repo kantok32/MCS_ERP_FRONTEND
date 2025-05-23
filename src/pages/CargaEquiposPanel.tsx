@@ -351,37 +351,23 @@ export default function CargaEquiposPanel() {
       return;
     }
 
-    // Verificar el tipo de archivo
+    // Validar extensión y tamaño
     const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase();
     if (!fileExtension || !['xlsx', 'xls', 'csv'].includes(fileExtension)) {
       setUploadStatus({ type: 'error', message: 'Por favor, seleccione un archivo Excel (.xlsx, .xls) o CSV (.csv).' });
+      return;
+    }
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      setUploadStatus({ type: 'error', message: 'El archivo no debe superar los 10MB.' });
       return;
     }
 
     setUploadStatus({ type: 'uploading', message: 'Subiendo y procesando archivo...' });
 
     const formData = new FormData();
-    let endpoint = '';
-    let fileNameInForm = '';
+    formData.append('file', selectedFile, selectedFile.name);
 
-    if (uploadType === 'plain') {
-      endpoint = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/upload-plain'; 
-      fileNameInForm = 'archivoExcelPlain'; 
-      console.log('Iniciando carga PLANA (Nuevos Equipos) al endpoint:', endpoint);
-    } else if (uploadType === 'matrix') {
-      endpoint = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/upload-specifications';
-      fileNameInForm = 'file';
-      console.log('Iniciando carga MATRICIAL (Actualizar Especificaciones) al endpoint:', endpoint);
-    } else {
-      setUploadStatus({ type: 'error', message: 'Tipo de carga no reconocido.' });
-      return;
-    }
-
-    // Añadir el archivo al FormData con el nombre correcto y el tipo de contenido
-    formData.append(fileNameInForm, selectedFile, selectedFile.name);
-    
-    // Añadir el tipo de archivo como un campo adicional
-    formData.append('fileType', fileExtension);
+    const endpoint = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/upload-specifications';
 
     try {
       console.log('Enviando archivo:', {
@@ -389,28 +375,21 @@ export default function CargaEquiposPanel() {
         tipo: selectedFile.type,
         tamaño: selectedFile.size,
         extension: fileExtension,
-        nombreCampo: fileNameInForm
+        nombreCampo: 'file'
       });
-      
+
       const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
-        headers: {
-          'Accept': 'application/json'
-        }
+        // No establecer Content-Type, dejar que el navegador lo maneje
       });
 
-      // Intentar obtener el cuerpo de la respuesta como texto primero
       const responseText = await response.text();
-      console.log('Respuesta del servidor (texto):', responseText);
-
       let result;
       try {
-        // Intentar parsear la respuesta como JSON
         result = JSON.parse(responseText);
       } catch (e) {
         console.error('Error al parsear respuesta como JSON:', e);
-        // Si no es JSON, mostrar el texto de error directamente
         throw new Error(responseText);
       }
 
@@ -423,10 +402,7 @@ export default function CargaEquiposPanel() {
         message: 'Archivo procesado correctamente',
         summary: result
       });
-      
-      // Resetear el archivo seleccionado después de una carga exitosa
       setSelectedFile(null);
-      
     } catch (error) {
       console.error('Error en carga masiva:', error);
       setUploadStatus({ 
