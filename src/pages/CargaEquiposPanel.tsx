@@ -452,11 +452,11 @@ export default function CargaEquiposPanel() {
 
     try {
       let data;
-      if (uploadType === 'plain') {
+    if (uploadType === 'plain') {
         data = await handleUploadEquipos(selectedFile);
-      } else if (uploadType === 'matrix') {
+    } else if (uploadType === 'matrix') {
         data = await handleUploadSpecs(selectedFile);
-      } else {
+    } else {
         throw new Error('Tipo de carga no reconocido.');
       }
       setUploadStatus({ type: 'success', message: data.message || 'Archivo procesado correctamente.', summary: data.summary });
