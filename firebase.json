@@ -8,9 +8,17 @@
     ],
     "rewrites": [
       {
+        "source": "/api/carga-directa",
+        "function": "api"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
     ]
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs18"
   }
 }
