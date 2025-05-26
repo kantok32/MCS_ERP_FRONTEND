@@ -370,16 +370,35 @@ export default function EquiposPanel() {
     setProductoParaVistaOpcionales(producto);
     setShowVistaOpcionalesModal(true);
 
+    // <<< INICIO DEBUG >>>
+    console.log("handleOpcionales: Producto:", producto); // <-- Añadido para depuración
+    // <<< FIN DEBUG >>>
+
     try {
-      if (!producto.Modelo || !producto.categoria) {
-        throw new Error('Faltan parámetros Modelo o Categoría del producto principal para buscar opcionales.');
-      }
       const params = new URLSearchParams();
       params.append('codigo', producto.codigo_producto);
-      params.append('modelo', producto.Modelo);
-      params.append('categoria', producto.categoria);
+      // Buscar modelo de forma flexible: primero en modelo (minúscula), luego en caracteristicas.modelo, luego en Modelo (capitalizado)
+      const modeloParaBuscar = producto.modelo || producto.caracteristicas?.modelo || producto.Modelo;
+      // Obtener categoría
+      const categoriaParaBuscar = producto.categoria;
 
-      const response = await fetch(`https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/opcionales?${params.toString()}`);
+      // <<< INICIO DEBUG 2 >>>
+      console.log("handleOpcionales: modeloParaBuscar ('" + modeloParaBuscar + "'), Tipo: " + typeof modeloParaBuscar); // <-- Añadido
+      console.log("handleOpcionales: categoriaParaBuscar ('" + categoriaParaBuscar + "'), Tipo: " + typeof categoriaParaBuscar); // <-- Añadido
+      // <<< FIN DEBUG 2 >>>
+
+      // Validar que tenemos un modelo válido y la categoría
+      if (!modeloParaBuscar || typeof modeloParaBuscar !== 'string' || modeloParaBuscar.trim() === '' || modeloParaBuscar.trim() === '-' || !categoriaParaBuscar || typeof categoriaParaBuscar !== 'string' || categoriaParaBuscar.trim() === '') {
+          throw new Error('Faltan parámetros requeridos (modelo o categoría) del producto principal para buscar opcionales.');
+      }
+
+      // Extraer solo la parte del modelo antes del primer espacio, si existe
+      const baseModelo = modeloParaBuscar.split(' ')[0];
+
+      params.append('modelo', baseModelo);
+      params.append('categoria', categoriaParaBuscar);
+
+      const response = await fetch(`https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/opcionales?codigo=${producto.codigo_producto}&modelo=${baseModelo}&categoria=${categoriaParaBuscar}`);
       const data: OpcionalesResponse = await response.json();
 
       if (!response.ok || !data.success) { 
