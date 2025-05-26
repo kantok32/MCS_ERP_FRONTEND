@@ -332,20 +332,14 @@ export default function CargaEquiposPanel() {
 
   // Función para descargar la plantilla de equipos (Excel)
   const handleDownloadEquiposTemplate = () => {
-    const data = [excelTemplateHeaders]; // Cabeceras como primera fila
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Plantilla Equipos");
-    XLSX.writeFile(wb, "PlantillaEquipos.xlsx"); // Nombre del archivo
+    // Llama al endpoint del backend para descargar la plantilla de equipos
+    window.location.href = `${BACKEND_URL}/api/products/download-template`;
   };
 
   // Función para descargar la plantilla de especificaciones (Excel)
   const handleDownloadSpecificationsTemplate = () => {
-    const data = [['codigo_producto', 'nombre_especificacion', 'valor']]; // Cabeceras
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Plantilla Especificaciones");
-    XLSX.writeFile(wb, "PlantillaEspecificaciones.xlsx"); // Nombre del archivo
+    // Llama al endpoint del backend para descargar la plantilla de especificaciones
+    window.location.href = `${BACKEND_URL}/api/products/download-specifications-template`;
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {

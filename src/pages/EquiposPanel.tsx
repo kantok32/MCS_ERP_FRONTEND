@@ -8,6 +8,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button, Box, Paper, Typography } from '@mui/material';
 import { ArrowRight } from 'lucide-react';
 
+const BACKEND_URL = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app';
+
 // Interfaces (copiadas de App.tsx)
 interface ApiResponse {
   success: boolean;
@@ -416,6 +418,23 @@ export default function EquiposPanel() {
     setError(null);
     console.log("Obteniendo productos del caché...");
     try {
+      // Paso 1: Resetear el caché en el backend
+      console.log("Reseteando caché de productos...");
+      const resetResponse = await fetch(`${BACKEND_URL}/api/products/cache/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Dependiendo de la API de la IA, podría ser necesario un body vacío o específico
+        body: JSON.stringify({}) // Envía un body JSON vacío por si acaso es requerido
+      });
+
+      if (!resetResponse.ok) {
+        const resetErrorData = await resetResponse.json();
+        throw new Error(resetErrorData.message || `Error al resetear el caché: ${resetResponse.status}`);
+      }
+
+      console.log("Caché reseteado exitosamente.", await resetResponse.json()); // Loggear respuesta del reset
+
+      // Paso 2: Obtener los productos del caché (ahora actualizado)
       const res = await fetch('https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/cache/all');
       if (!res.ok) throw new Error(`Error en la respuesta del servidor: ${res.status}`);
       const response: ApiResponse = await res.json();
