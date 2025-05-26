@@ -1,5 +1,4 @@
 const express = require('express');
-const cors = require('cors');
 const multer = require('multer');
 const XLSX = require('xlsx');
 const { MongoClient } = require('mongodb');
@@ -10,20 +9,6 @@ const upload = multer({ dest: 'uploads/' });
 const MONGO_URI = 'mongodb+srv://ecoalliance33:cXIdVOePhB0RCArx@automatizaciondb.mj72mym.mongodb.net/';
 const DB_NAME = 'Automatizacion_lista_productos_res';
 const COLLECTION = 'productos';
-
-// CORS solo para la página específica (solo origen de Firebase Hosting)
-app.use(cors({
-  origin: 'https://mcs-erp-frontend.web.app',
-  methods: ['POST'],
-}));
-
-// Seguridad: solo permitir POST a /api/carga-directa
-app.use((req, res, next) => {
-  if (req.method !== 'POST' || req.path !== '/api/carga-directa') {
-    return res.status(403).json({ error: 'Acceso denegado' });
-  }
-  next();
-});
 
 // Endpoint para subir archivo Excel/CSV y cargar a MongoDB
 app.post('/api/carga-directa', upload.single('archivoExcelPlain'), async (req, res) => {
@@ -60,11 +45,6 @@ app.post('/api/carga-directa', upload.single('archivoExcelPlain'), async (req, r
     });
   }
 });
-
-// Iniciar servidor (comentado para Firebase Functions)
-// app.listen(5001, () => {
-//   console.log('API de carga directa ejecutándose en puerto 5001');
-// });
 
 // Exportar la aplicación Express para Firebase Functions
 exports.api = app; 
