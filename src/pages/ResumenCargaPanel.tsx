@@ -158,7 +158,8 @@ export default function ResumenCargaPanel() {
                   <TableHead>
                     <TableRow sx={{ backgroundColor: '#F3F4F6' }}>
                       <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>Código</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', width: '60%' }}>Nombre</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', width: '40%' }}>Nombre</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>Fecha Cotización</TableCell>
                       <TableCell sx={{ fontWeight: 'bold', width: '20%', textAlign: 'right' }}>Precio EUR</TableCell>
                     </TableRow>
                   </TableHead>
@@ -166,7 +167,8 @@ export default function ResumenCargaPanel() {
                     <TableRow>
                       <TableCell>{item.principal.codigo_producto || '-'}</TableCell>
                       <TableCell>{item.principal.nombre_del_producto || '-'}</TableCell>
-                      <TableCell sx={{ textAlign: 'right' }}>{formatCurrency(item.principal.datos_contables?.costo_fabrica)}</TableCell>
+                      <TableCell>{item.principal.datos_contables?.fecha_cotizacion || item.principal.fecha_cotizacion || '-'}</TableCell>
+                      <TableCell sx={{ textAlign: 'right' }}>{formatCurrency(item.principal.datos_contables?.costo_fabrica || item.principal.costo_fabrica)}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -192,7 +194,8 @@ export default function ResumenCargaPanel() {
                     <TableHead>
                       <TableRow sx={{ backgroundColor: '#F3F4F6' }}>
                         <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>Código</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold', width: '60%' }}>Nombre</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', width: '40%' }}>Nombre</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>Fecha Cotización</TableCell>
                         <TableCell sx={{ fontWeight: 'bold', width: '20%', textAlign: 'right' }}>Precio EUR</TableCell>
                       </TableRow>
                     </TableHead>
@@ -201,7 +204,8 @@ export default function ResumenCargaPanel() {
                         <TableRow key={opcional.codigo_producto || opIndex}>
                           <TableCell>{opcional.codigo_producto || '-'}</TableCell>
                           <TableCell>{opcional.nombre_del_producto || '-'}</TableCell>
-                          <TableCell sx={{ textAlign: 'right' }}>{formatCurrency(opcional.datos_contables?.costo_fabrica)}</TableCell>
+                          <TableCell>{opcional.datos_contables?.fecha_cotizacion || opcional.fecha_cotizacion || '-'}</TableCell>
+                          <TableCell sx={{ textAlign: 'right' }}>{formatCurrency(opcional.datos_contables?.costo_fabrica || opcional.costo_fabrica)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

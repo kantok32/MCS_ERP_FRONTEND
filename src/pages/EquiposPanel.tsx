@@ -348,6 +348,9 @@ export default function EquiposPanel() {
         setDetalleProducto(data.data.product);
         setShowDetalleModal(true);
         console.log('Detalles del producto recibidos:', data.data.product);
+        // <<< INICIO DEBUG ESPECIFICACIONES >>>
+        console.log('handleVerDetalle: especificaciones_tecnicas recibidas:', data.data.product.especificaciones_tecnicas);
+        // <<< FIN DEBUG ESPECIFICACIONES >>>
       } else {
         throw new Error('Producto no encontrado o formato de respuesta inválido');
       }
@@ -1345,15 +1348,32 @@ export default function EquiposPanel() {
                       </tr>
                     </thead>
                     <tbody>
-                      {vistaOpcionalesData.map((opcional, index) => (
-                        <tr key={opcional.codigo_producto || `opc-${index}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                          <td style={unifiedTdStyle}>{opcional.codigo_producto || '-'}</td>
-                          {/* Ajuste para tomar nombre_del_producto de caracteristicas primero */}
-                          <td style={unifiedTdStyle}>{opcional.caracteristicas?.nombre_del_producto || opcional.nombre_del_producto || '-'}</td>
-                          <td style={unifiedTdStyle}>{opcional.Modelo || opcional.caracteristicas?.modelo || '-'}</td>
-                          <td style={unifiedTdStyle}>{opcional.producto || '-'}</td>
-                        </tr>
-                      ))}
+                      {vistaOpcionalesData
+                        .filter(opcional => { // <<< APLICAR FILTRO AQUÍ >>>
+                          // Asegurarse de que el opcional tenga el campo de asignación y que el producto principal tenga modelo
+                          if (!opcional.asignado_a_codigo_principal || !productoParaVistaOpcionales?.modelo) {
+                            return false; // No mostrar si falta info en el opcional o en el producto principal
+                          }
+                          // Comparar el campo de asignación del opcional con el modelo (base) del producto principal
+                          // Convertir a minúsculas y trim para una comparación insensible a mayúsculas/espacios
+                          const asignadoNormalizado = String(opcional.asignado_a_codigo_principal).trim().toLowerCase();
+                          const modeloPrincipalNormalizado = String(productoParaVistaOpcionales.modelo).split(' ')[0].trim().toLowerCase(); // Usar solo la base del modelo principal
+ 
+                          // <<< INICIO DEBUG FILTRO >>>
+                          console.log(`Filtrando opcional ${opcional.codigo_producto}: Asignado='${asignadoNormalizado}', Modelo Principal Base='${modeloPrincipalNormalizado}', Coincide: ${asignadoNormalizado === modeloPrincipalNormalizado}`);
+                          // <<< FIN DEBUG FILTRO >>>
+ 
+                          return asignadoNormalizado === modeloPrincipalNormalizado;
+                        })
+                        .map((opcional, index) => (
+                          <tr key={opcional.codigo_producto || `opc-${index}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                            <td style={unifiedTdStyle}>{opcional.codigo_producto || '-'}</td>
+                            {/* Ajuste para tomar nombre_del_producto de caracteristicas primero */}
+                            <td style={unifiedTdStyle}>{opcional.caracteristicas?.nombre_del_producto || opcional.nombre_del_producto || '-'}</td>
+                            <td style={unifiedTdStyle}>{opcional.Modelo || opcional.caracteristicas?.modelo || '-'}</td>
+                            <td style={unifiedTdStyle}>{opcional.producto || '-'}</td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>

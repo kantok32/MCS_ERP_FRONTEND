@@ -155,7 +155,7 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
     const profileNameFromCalc = detalle.profileName;
     const currentProfileName = profile?.nombre_perfil;
     const displayProfileName = currentProfileName || profileNameFromCalc || "Perfil Desconocido";
-    const displayProfileId = profile?._id || "ID Desconocido"; 
+    const displayProfileId = profile?._id || "ID Desconocido";
     const inputs = detalle.inputs;
     const calculados = detalle.calculados;
     if (!inputs || !calculados) {
