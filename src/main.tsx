@@ -18,6 +18,7 @@ import ResumenCargaPanel from './pages/ResumenCargaPanel'
 import LoginPage from './pages/LoginPage'
 import HistorialPage from './pages/HistorialPage'
 import HistorialDetallePage from './pages/HistorialDetallePage'
+import CargaManualEquiposPage from './pages/CargaManualEquiposPage'
 // import DetallesEnvioPanel from './pages/DetallesEnvioPanel'; // Comentado si no se usa directamente aquí
 
 // Forzar modo claro
@@ -63,6 +64,7 @@ const AnimatedRoutes = () => {
             <Route path="costos" element={<AnimatedPage><CostosAdminPanel /></AnimatedPage>} />
             <Route path="perfiles" element={<AnimatedPage><PerfilesPanel /></AnimatedPage>} />
             <Route path="carga-equipos" element={<AnimatedPage><CargaEquiposPanel /></AnimatedPage>} />
+            <Route path="carga-manual-equipos" element={<AnimatedPage><CargaManualEquiposPage /></AnimatedPage>} />
           </Route>
           <Route path="/perfiles/:id/editar" element={<AnimatedPage><PerfilEditForm /></AnimatedPage>} />
           <Route path="dashboard" element={<AnimatedPage><DashboardPanel /></AnimatedPage>} />
@@ -139,3 +141,27 @@ try {
 //   </div>
 // );
 // --- Fin Placeholder ---
+
+const buttonStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '10px 20px',
+  backgroundColor: '#0ea5e9',
+  color: 'white',
+  border: 'none',
+  borderRadius: '6px',
+  cursor: 'pointer',
+  fontSize: '14px',
+  fontWeight: 500,
+  gap: '8px',
+};
+
+const uploadZoneStyle: React.CSSProperties = {
+  border: '2px dashed #cbd5e1',
+  borderRadius: '8px',
+  padding: '40px',
+  textAlign: 'center',
+  backgroundColor: '#f8fafc',
+  color: '#64748b',
+  marginBottom: '24px',
+};

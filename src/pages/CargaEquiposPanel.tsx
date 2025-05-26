@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { UploadCloud, FileText, Download, Plus, X, AlertCircle, CheckCircle, FileSpreadsheet, Table2 } from 'lucide-react';
 import * as XLSX from 'xlsx'; // Importar XLSX para generar el archivo Excel
+import { useNavigate } from 'react-router-dom';
 
 // Interfaz para una especificación técnica
 interface SpecItem {
@@ -154,6 +155,8 @@ export default function CargaEquiposPanel() {
 
   // --- Estado para selección múltiple de filas en la tabla manual ---
   const [filasSeleccionadas, setFilasSeleccionadas] = useState<number[]>([]);
+
+  const navigate = useNavigate();
 
   // --- Manejadores de Input --- 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -362,10 +365,8 @@ export default function CargaEquiposPanel() {
   };
 
   // --- Lógica para descargar la plantilla de carga masiva PLANA (Equipos) ---
-  const handleDownloadTemplate = () => {
-    // Usar la URL absoluta del backend para evitar problemas de rutas en producción y desarrollo
-    const templateUrl = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/download-template';
-    window.open(templateUrl, '_blank'); // Inicia la descarga en una nueva pestaña
+  const handleGoToCargaManual = () => {
+    navigate('/admin/carga-manual-equipos');
   };
 
   // --- Lógica para descargar la plantilla de carga masiva MATRICIAL (Especificaciones CSV) ---
@@ -814,7 +815,7 @@ export default function CargaEquiposPanel() {
           <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
             <button 
               style={{...buttonStyle, backgroundColor: '#3b82f6'}}
-              onClick={() => { handleDownloadTemplate(); setPlantillaSeleccionada('equipos'); }}
+              onClick={() => { handleGoToCargaManual(); setPlantillaSeleccionada('equipos'); }}
             >
               <Download size={16} /> Descargar Plantilla Equipos (XLSX)
             </button>
