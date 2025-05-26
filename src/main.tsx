@@ -18,7 +18,7 @@ import ResumenCargaPanel from './pages/ResumenCargaPanel'
 import LoginPage from './pages/LoginPage'
 import HistorialPage from './pages/HistorialPage'
 import HistorialDetallePage from './pages/HistorialDetallePage'
-import CargaManualEquiposPage from './pages/CargaManualEquiposPage'
+// import CargaManualEquiposPage from './pages/CargaManualEquiposPage'
 // import DetallesEnvioPanel from './pages/DetallesEnvioPanel'; // Comentado si no se usa directamente aquí
 
 // Forzar modo claro
@@ -64,7 +64,7 @@ const AnimatedRoutes = () => {
             <Route path="costos" element={<AnimatedPage><CostosAdminPanel /></AnimatedPage>} />
             <Route path="perfiles" element={<AnimatedPage><PerfilesPanel /></AnimatedPage>} />
             <Route path="carga-equipos" element={<AnimatedPage><CargaEquiposPanel /></AnimatedPage>} />
-            <Route path="carga-manual-equipos" element={<AnimatedPage><CargaManualEquiposPage /></AnimatedPage>} />
+            {/* <Route path="carga-manual-equipos" element={<AnimatedPage><CargaManualEquiposPage /></AnimatedPage>} /> */}
           </Route>
           <Route path="/perfiles/:id/editar" element={<AnimatedPage><PerfilEditForm /></AnimatedPage>} />
           <Route path="dashboard" element={<AnimatedPage><DashboardPanel /></AnimatedPage>} />
