@@ -1089,7 +1089,7 @@ export default function EquiposPanel() {
                         {/* Column: Descripción */}
                         <td style={{ padding: '16px', textAlign: 'left' }}>{producto.descripcion || '-'}</td>
                         {/* Column: Modelo */}
-                        <td style={{ padding: '16px', textAlign: 'left' }}>{producto.Modelo || '-'}</td>
+                        <td style={{ padding: '16px', textAlign: 'left' }}>{producto.modelo || '-'}</td>
                         {/* Column: Ver Detalle */}
                         <td style={{ padding: '12px', textAlign: 'center' }}>
                           <button 
