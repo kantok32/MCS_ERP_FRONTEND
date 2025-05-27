@@ -259,42 +259,60 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
 
 // --- Nueva función para llamar al API de cálculo --- (Modificada)
 const fetchCalculoDetallado = async (
-  costoFabricaOriginalEUR: number,
-  fechaCotizacionStr: string | undefined,
+  producto: Producto,
+  _costoFabricaOriginalEUR: number,
+  _fechaCotizacionStr: string | undefined,
   profileId: string,
   anoEnCurso: number,
   tcEurUsd: number,
   nombrePerfil: string
 ): Promise<CalculationResult> => {
-  
+  // Extraer los datos correctamente del producto
+  // 1. costo_fabrica
+  let costoFabricaOriginalEUR = producto.datos_contables?.costo_fabrica;
+  if (costoFabricaOriginalEUR === undefined || costoFabricaOriginalEUR === null) {
+    // fallback a nivel raíz
+    costoFabricaOriginalEUR = (producto as any).costo_fabrica;
+  }
+  if (costoFabricaOriginalEUR === undefined || costoFabricaOriginalEUR === null) {
+    console.warn('[fetchCalculoDetallado] costo_fabrica no encontrado para producto', producto);
+    costoFabricaOriginalEUR = 0;
+  }
+  // 2. fecha_cotizacion
+  let fechaCotizacionStr = producto.datos_contables?.fecha_cotizacion;
+  if (!fechaCotizacionStr) {
+    fechaCotizacionStr = (producto as any).fecha_cotizacion;
+  }
+  // 3. codigo_producto
+  let codigo_producto = producto.codigo_producto || (producto as any).Codigo_Producto;
+  if (!codigo_producto) {
+    console.warn('[fetchCalculoDetallado] codigo_producto no encontrado para producto', producto);
+    codigo_producto = '';
+  }
+  // Procesar año de cotización
   let parsedYear: number | undefined;
-  if (fechaCotizacionStr && /^\d{4}$/.test(fechaCotizacionStr)) { // Es un string de 4 dígitos (ej: "2023")
-    parsedYear = parseInt(fechaCotizacionStr, 10);
-  } else if (fechaCotizacionStr) { // Intenta parsear como fecha más completa
-    const dateObj = new Date(fechaCotizacionStr);
-    // Verificar si el objeto Date es válido y getFullYear() devuelve un número
+  if (fechaCotizacionStr && /^\d{4}$/.test(fechaCotizacionStr as string)) {
+    parsedYear = parseInt(fechaCotizacionStr as string, 10);
+  } else if (fechaCotizacionStr) {
+    const dateObj = new Date(fechaCotizacionStr as string);
     if (dateObj instanceof Date && !isNaN(dateObj.valueOf()) && !isNaN(dateObj.getFullYear())) {
       parsedYear = dateObj.getFullYear();
     } else {
-        console.warn(`[fetchCalculoDetallado] fechaCotizacionStr "${fechaCotizacionStr}" no pudo ser parseada a una fecha válida.`);
+      console.warn(`[fetchCalculoDetallado] fechaCotizacionStr "${fechaCotizacionStr}" no pudo ser parseada a una fecha válida.`);
     }
   }
-
   const anoCotizacion = parsedYear !== undefined ? parsedYear : anoEnCurso - 1;
-
   const payload = {
     profileId: profileId,
-    anoCotizacion: anoCotizacion, 
+    anoCotizacion: anoCotizacion,
     anoEnCurso: anoEnCurso,
     costoFabricaOriginalEUR: costoFabricaOriginalEUR,
     tipoCambioEurUsdActual: tcEurUsd,
+    codigo_producto: codigo_producto,
   };
-
   const API_BASE_URL = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api';
   const CALCULATION_ENDPOINT = `${API_BASE_URL}/costo-perfiles/calcular-producto`;
-
   console.log('[ResultadosCalculoCostosPanel] Enviando payload a calcular-producto:', payload);
-
   try {
     const response = await fetch(CALCULATION_ENDPOINT, {
       method: 'POST',
@@ -484,6 +502,7 @@ export default function ResultadosCalculoCostosPanel() {
     try {
       const lineasConDetallePromises = lineasParaCalcular.map(async (lineaExistente) => {
         const detallePrincipal = await fetchCalculoDetallado(
+          lineaExistente.principal,
           lineaExistente.principal.datos_contables?.costo_fabrica || 0,
           getFechaCotizacionAsString(lineaExistente.principal.datos_contables?.fecha_cotizacion),
           currentProfileData._id,
@@ -496,6 +515,7 @@ export default function ResultadosCalculoCostosPanel() {
         if (lineaExistente.opcionales && lineaExistente.opcionales.length > 0) {
             const detallesOpcPromises = lineaExistente.opcionales.map(opcional => 
               fetchCalculoDetallado(
+                opcional,
                 opcional.datos_contables?.costo_fabrica || 0,
                 getFechaCotizacionAsString(opcional.datos_contables?.fecha_cotizacion),
                 currentProfileData._id,
@@ -641,7 +661,7 @@ export default function ResultadosCalculoCostosPanel() {
     navigate('/configurar-opcionales');
   };
 
-  const handleGenerarInformePDF = () => {
+  const handleGenerarInformeHTML = () => {
     if (!savedCalculoId) {
         setSaveErrorMessage("Debe calcular y guardar el resultado primero para poder generar el informe.");
         return;
@@ -650,16 +670,305 @@ export default function ResultadosCalculoCostosPanel() {
         setSaveErrorMessage("No hay un perfil seleccionado."); 
         return;
     }
-    navigate('/configuracion-panel', {
-        state: {
-            itemsParaCotizar: state?.productosConOpcionalesSeleccionados || [],
-            resultadosCalculados: latestCalculatedResults,
-            idCalculoHistorial: savedCalculoId, 
-            selectedProfileId: currentProfileData._id,
-            nombrePerfil: currentProfileData.nombre_perfil,
-            anoEnCursoGlobal: anoActualGlobal,
-        }
-    });
+
+    const informeHTML = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Informe de Cotización</title>
+          <style>
+              :root {
+                  --primary-color: #2196f3;
+                  --secondary-color: #1976d2;
+                  --text-color: #333;
+                  --border-color: #e0e0e0;
+                  --background-light: #f5f5f5;
+                  --success-color: #4caf50;
+                  --warning-color: #ff9800;
+              }
+
+              * {
+                  margin: 0;
+                  padding: 0;
+                  box-sizing: border-box;
+              }
+
+              body {
+                  font-family: 'Segoe UI', Arial, sans-serif;
+                  line-height: 1.6;
+                  color: var(--text-color);
+                  background-color: #fff;
+                  margin: 0;
+                  padding: 0;
+              }
+
+              .container {
+                  max-width: 1200px;
+                  margin: 0 auto;
+                  padding: 2rem;
+              }
+
+              .header {
+                  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+                  color: white;
+                  padding: 2rem;
+                  text-align: center;
+                  border-radius: 8px;
+                  margin-bottom: 2rem;
+                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+              }
+
+              .header h1 {
+                  font-size: 2.5rem;
+                  margin-bottom: 1rem;
+              }
+
+              .header p {
+                  font-size: 1.1rem;
+                  opacity: 0.9;
+              }
+
+              .company-info {
+                  background-color: white;
+                  padding: 1.5rem;
+                  border-radius: 8px;
+                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                  margin-bottom: 2rem;
+              }
+
+              .company-info h2 {
+                  color: var(--primary-color);
+                  margin-bottom: 1rem;
+                  border-bottom: 2px solid var(--border-color);
+                  padding-bottom: 0.5rem;
+              }
+
+              .product-section {
+                  background-color: white;
+                  border-radius: 8px;
+                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                  margin-bottom: 2rem;
+                  overflow: hidden;
+              }
+
+              .product-header {
+                  background-color: var(--background-light);
+                  padding: 1.5rem;
+                  border-bottom: 1px solid var(--border-color);
+              }
+
+              .product-header h3 {
+                  color: var(--primary-color);
+                  margin-bottom: 0.5rem;
+              }
+
+              .price-details {
+                  padding: 1.5rem;
+              }
+
+              .price-details h4 {
+                  color: var(--secondary-color);
+                  margin-bottom: 1rem;
+              }
+
+              table {
+                  width: 100%;
+                  border-collapse: collapse;
+                  margin: 1rem 0;
+                  background-color: white;
+                  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+              }
+
+              th, td {
+                  padding: 1rem;
+                  text-align: left;
+                  border-bottom: 1px solid var(--border-color);
+              }
+
+              th {
+                  background-color: var(--background-light);
+                  font-weight: 600;
+                  color: var(--secondary-color);
+              }
+
+              tr:hover {
+                  background-color: #f8f9fa;
+              }
+
+              .optional-products {
+                  margin-top: 1.5rem;
+                  padding: 1.5rem;
+                  background-color: #f8f9fa;
+                  border-radius: 8px;
+              }
+
+              .optional-products h4 {
+                  color: var(--secondary-color);
+                  margin-bottom: 1rem;
+              }
+
+              .total-section {
+                  background-color: var(--background-light);
+                  padding: 1.5rem;
+                  border-radius: 8px;
+                  margin-top: 2rem;
+                  text-align: right;
+              }
+
+              .total-section .amount {
+                  font-size: 1.5rem;
+                  color: var(--success-color);
+                  font-weight: bold;
+              }
+
+              .footer {
+                  text-align: center;
+                  padding: 2rem;
+                  margin-top: 3rem;
+                  border-top: 1px solid var(--border-color);
+                  color: #666;
+              }
+
+              .footer p {
+                  margin: 0.5rem 0;
+              }
+
+              .badge {
+                  display: inline-block;
+                  padding: 0.25rem 0.75rem;
+                  border-radius: 50px;
+                  font-size: 0.875rem;
+                  font-weight: 500;
+                  margin-left: 0.5rem;
+              }
+
+              .badge-primary {
+                  background-color: var(--primary-color);
+                  color: white;
+              }
+
+              .badge-secondary {
+                  background-color: var(--secondary-color);
+                  color: white;
+              }
+
+              @media print {
+                  body {
+                      background-color: white;
+                  }
+                  .container {
+                      max-width: 100%;
+                      padding: 0;
+                  }
+                  .header {
+                      box-shadow: none;
+                  }
+                  .product-section {
+                      box-shadow: none;
+                      break-inside: avoid;
+                  }
+              }
+          </style>
+      </head>
+      <body>
+          <div class="container">
+              <div class="header">
+                  <h1>Informe de Cotización</h1>
+                  <p>Fecha: ${new Date().toLocaleDateString()}</p>
+              </div>
+
+              <div class="company-info">
+                  <h2>Información de la Empresa</h2>
+                  <p><strong>Empresa:</strong> ${currentProfileData.nombre_perfil}</p>
+                  <p><strong>Perfil de Costo:</strong> ${currentProfileData.nombre_perfil}</p>
+                  <p><strong>ID del Cálculo:</strong> <span class="badge badge-primary">${savedCalculoId}</span></p>
+              </div>
+
+              <div class="products">
+                  ${lineasCalculadas.map((linea, index) => `
+                      <div class="product-section">
+                          <div class="product-header">
+                              <h3>${linea.principal.nombre_del_producto || 'Producto Principal'}</h3>
+                              <p>Código: <span class="badge badge-secondary">${linea.principal.codigo_producto || 'N/A'}</span></p>
+                          </div>
+                          
+                          ${linea.detalleCalculoPrincipal?.calculados ? `
+                              <div class="price-details">
+                                  <h4>Detalles de Costos</h4>
+                                  <table>
+                                      <thead>
+                                          <tr>
+                                              <th>Concepto</th>
+                                              <th>Valor</th>
+                                          </tr>
+                                      </thead>
+                                      <tbody>
+                                          ${Object.entries(linea.detalleCalculoPrincipal.calculados).map(([key, value]) => `
+                                              <tr>
+                                                  <td>${key}</td>
+                                                  <td>${typeof value === 'number' ? formatCLP(value) : JSON.stringify(value)}</td>
+                                              </tr>
+                                          `).join('')}
+                                      </tbody>
+                                  </table>
+                              </div>
+                          ` : ''}
+
+                          ${linea.opcionales.length > 0 ? `
+                              <div class="optional-products">
+                                  <h4>Productos Opcionales</h4>
+                                  ${linea.opcionales.map((opcional, opcIndex) => `
+                                      <div class="product-section">
+                                          <div class="product-header">
+                                              <h5>${opcional.nombre_del_producto}</h5>
+                                              <p>Código: <span class="badge badge-secondary">${opcional.codigo_producto || 'N/A'}</span></p>
+                                          </div>
+                                          ${linea.detallesCalculoOpcionales?.[opcIndex]?.calculados ? `
+                                              <div class="price-details">
+                                                  <table>
+                                                      <thead>
+                                                          <tr>
+                                                              <th>Concepto</th>
+                                                              <th>Valor</th>
+                                                          </tr>
+                                                      </thead>
+                                                      <tbody>
+                                                          ${Object.entries(linea.detallesCalculoOpcionales[opcIndex].calculados).map(([key, value]) => `
+                                                              <tr>
+                                                                  <td>${key}</td>
+                                                                  <td>${typeof value === 'number' ? formatCLP(value) : JSON.stringify(value)}</td>
+                                                              </tr>
+                                                          `).join('')}
+                                                      </tbody>
+                                                  </table>
+                                              </div>
+                                          ` : ''}
+                                      </div>
+                                  `).join('')}
+                              </div>
+                          ` : ''}
+                      </div>
+                  `).join('')}
+              </div>
+
+              <div class="footer">
+                  <p>Este informe fue generado automáticamente por el sistema MCS ERP</p>
+                  <p>© ${new Date().getFullYear()} MCS ERP - Todos los derechos reservados</p>
+              </div>
+          </div>
+      </body>
+      </html>
+    `;
+
+    const ventanaInforme = window.open('', '_blank');
+    if (ventanaInforme) {
+        ventanaInforme.document.write(informeHTML);
+        ventanaInforme.document.close();
+    } else {
+        setSaveErrorMessage("No se pudo abrir la ventana del informe. Por favor, verifica que tu navegador no esté bloqueando las ventanas emergentes.");
+    }
   };
 
   if (isLoading || isProfilesLoading) {
@@ -828,10 +1137,10 @@ export default function ResultadosCalculoCostosPanel() {
             color="success"
             size="large"
             startIcon={<FileText />}
-            onClick={handleGenerarInformePDF}
+            onClick={handleGenerarInformeHTML}
             disabled={!savedCalculoId || isCalculating || isSaving}
           >
-            Configurar Cotización y Datos Adicionales (PDF)
+            Generar Informe HTML
           </Button>
         </Box>
 

@@ -1349,21 +1349,18 @@ export default function EquiposPanel() {
                     </thead>
                     <tbody>
                       {vistaOpcionalesData
-                        .filter(opcional => { // <<< APLICAR FILTRO AQUÍ >>>
-                          // Asegurarse de que el opcional tenga el campo de asignación y que el producto principal tenga modelo
+                        .filter(opcional => {
                           if (!opcional.asignado_a_codigo_principal || !productoParaVistaOpcionales?.modelo) {
-                            return false; // No mostrar si falta info en el opcional o en el producto principal
+                            return false;
                           }
-                          // Comparar el campo de asignación del opcional con el modelo (base) del producto principal
-                          // Convertir a minúsculas y trim para una comparación insensible a mayúsculas/espacios
-                          const asignadoNormalizado = String(opcional.asignado_a_codigo_principal).trim().toLowerCase();
-                          const modeloPrincipalNormalizado = String(productoParaVistaOpcionales.modelo).split(' ')[0].trim().toLowerCase(); // Usar solo la base del modelo principal
- 
-                          // <<< INICIO DEBUG FILTRO >>>
-                          console.log(`Filtrando opcional ${opcional.codigo_producto}: Asignado='${asignadoNormalizado}', Modelo Principal Base='${modeloPrincipalNormalizado}', Coincide: ${asignadoNormalizado === modeloPrincipalNormalizado}`);
-                          // <<< FIN DEBUG FILTRO >>>
- 
-                          return asignadoNormalizado === modeloPrincipalNormalizado;
+                          // Obtener modelo base del principal
+                          const modeloPrincipalBase = String(productoParaVistaOpcionales.modelo).split(' ')[0].trim().toLowerCase();
+                          // Obtener todas las asignaciones posibles del opcional
+                          const asignaciones = String(opcional.asignado_a_codigo_principal)
+                            .split('/')
+                            .map(s => s.trim().toLowerCase());
+                          // Mostrar si alguna asignación coincide con el modelo base
+                          return asignaciones.includes(modeloPrincipalBase);
                         })
                         .map((opcional, index) => (
                           <tr key={opcional.codigo_producto || `opc-${index}`} style={{ borderBottom: '1px solid #e5e7eb' }}>

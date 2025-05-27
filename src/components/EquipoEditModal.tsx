@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Trash2, ChevronDown, ChevronRight, Save, X, FileText } from 'lucide-react';
 
 // Asume que tienes tipos definidos para Producto, si no, créalos o ajústalos.
 // import { Producto } from '../types/Producto'; 
@@ -117,6 +117,116 @@ const specDeleteButtonStyle: React.CSSProperties = {
 };
 // FIN DE NUEVOS ESTILOS
 
+// NUEVOS ESTILOS MEJORADOS
+const modalOverlayStyle: React.CSSProperties = {
+  position: 'fixed',
+  top: 0, left: 0, right: 0, bottom: 0,
+  background: 'rgba(30, 41, 59, 0.25)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  zIndex: 1000
+};
+
+const modalContentStyle: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ef 100%)',
+  borderRadius: '16px',
+  boxShadow: '0 8px 32px rgba(30,41,59,0.18)',
+  width: '95%',
+  maxWidth: '900px',
+  maxHeight: '90vh',
+  overflow: 'hidden',
+  display: 'flex', flexDirection: 'column',
+};
+
+const modalHeaderStyle: React.CSSProperties = {
+  background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)',
+  color: 'white',
+  padding: '24px 32px 16px 32px',
+  borderTopLeftRadius: '16px',
+  borderTopRightRadius: '16px',
+  fontSize: '1.7rem',
+  fontWeight: 700,
+  letterSpacing: '0.5px',
+  boxShadow: '0 2px 8px rgba(30,41,59,0.06)',
+  textAlign: 'center',
+};
+
+const modalBodyStyle: React.CSSProperties = {
+  padding: '24px 32px',
+  overflowY: 'auto',
+  flex: 1,
+};
+
+const improvedSectionTitleStyle: React.CSSProperties = {
+  fontSize: '1.15rem',
+  fontWeight: 600,
+  color: '#2563eb',
+  margin: '24px 0 12px 0',
+  borderBottom: '1.5px solid #e0e7ef',
+  paddingBottom: '6px',
+  letterSpacing: '0.2px',
+};
+
+const improvedInputStyle: React.CSSProperties = {
+  ...inputBaseStyle,
+  border: '1.5px solid #cbd5e1',
+  borderRadius: '7px',
+  background: '#f1f5f9',
+  transition: 'border 0.2s',
+  marginBottom: '2px',
+};
+
+const improvedInputFocusStyle: React.CSSProperties = {
+  border: '1.5px solid #2563eb',
+  outline: 'none',
+  background: '#fff',
+};
+
+const improvedButtonStyle: React.CSSProperties = {
+  padding: '10px 24px',
+  borderRadius: '7px',
+  border: 'none',
+  fontWeight: 600,
+  fontSize: '1rem',
+  cursor: 'pointer',
+  transition: 'background 0.2s',
+};
+
+const cancelButtonStyle: React.CSSProperties = {
+  ...improvedButtonStyle,
+  background: '#e0e7ef',
+  color: '#334155',
+  marginRight: '8px',
+};
+
+const saveButtonStyle: React.CSSProperties = {
+  ...improvedButtonStyle,
+  background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)',
+  color: 'white',
+  boxShadow: '0 2px 8px rgba(30,41,59,0.08)',
+};
+
+const improvedCheckboxStyle: React.CSSProperties = {
+  accentColor: '#2563eb',
+  width: '18px',
+  height: '18px',
+  marginRight: '8px',
+};
+
+// --- ESTILOS UNIFICADOS CON VER DETALLE ---
+const unifiedModalOverlayStyle: React.CSSProperties = {
+  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+  backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1040
+};
+const unifiedModalContentStyle: React.CSSProperties = {
+  backgroundColor: 'white', borderRadius: '8px', width: '95%', maxWidth: '900px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+};
+const unifiedHeaderStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #e5e7eb', background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)', color: 'white' };
+const unifiedTitleStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '18px', fontWeight: 600, color: 'white' };
+const unifiedBodyStyle: React.CSSProperties = { flexGrow: 1, overflowY: 'auto', padding: '24px', backgroundColor: '#F9FAFB' };
+const unifiedFooterStyle: React.CSSProperties = { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '16px 24px', borderTop: '1px solid #e5e7eb', backgroundColor: '#f8f9fa' };
+const unifiedSecondaryButtonStyle: React.CSSProperties = { padding: '8px 16px', borderRadius: '6px', border: '1px solid #D1D5DB', backgroundColor: 'white', color: '#374151', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 500 };
+const unifiedPrimaryButtonStyle: React.CSSProperties = { ...unifiedSecondaryButtonStyle, backgroundColor: '#1e88e5', color: 'white', borderColor: '#1e88e5' };
+
 const EquipoEditModal: React.FC<EquipoEditModalProps> = ({ open, onClose, producto, onSaveSuccess }) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [formData, setFormData] = useState<any>({}); // Debería ser 'Partial<Producto>'
@@ -177,25 +287,22 @@ const EquipoEditModal: React.FC<EquipoEditModalProps> = ({ open, onClose, produc
     }
   }, [producto, open]);
 
+  // Cambiar handleInputChange para soportar keys anidadas
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-
     if (name.includes('.')) {
-      const [objectName, fieldName] = name.split('.');
-      setFormData((prev: typeof formData) => ({
-        ...prev,
-        [objectName]: {
-          ...prev[objectName],
-          [fieldName]: type === 'checkbox' ? checked : value,
-        },
-      }));
-    } else if (name === 'tipo') { // --- Sync es_opcional when Tipo changes ---
-      setFormData((prev: typeof formData) => ({
-        ...prev,
-        tipo: value,
-        es_opcional: value === 'opcional',
-      }));
+      const keys = name.split('.');
+      setFormData((prev: typeof formData) => {
+        const newData = { ...prev };
+        let obj = newData;
+        for (let i = 0; i < keys.length - 1; i++) {
+          if (!obj[keys[i]]) obj[keys[i]] = {};
+          obj = obj[keys[i]];
+        }
+        obj[keys[keys.length - 1]] = type === 'checkbox' ? checked : value;
+        return newData;
+      });
     } else {
       setFormData((prev: typeof formData) => ({
         ...prev,
@@ -407,147 +514,79 @@ const EquipoEditModal: React.FC<EquipoEditModalProps> = ({ open, onClose, produc
     });
   };
 
-  return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', zIndex: 1000
-    }}>
-      <div style={{
-        backgroundColor: 'white', padding: '20px 30px', borderRadius: '8px',
-        maxHeight: '90vh', overflowY: 'auto',
-        width: '95%',
-        maxWidth: '2000px',
-        boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
-      }}>
-        <h2 style={modalTitleStyle}>Editar Producto: {producto.Codigo_Producto}</h2>
-        <form onSubmit={handleSubmit}>
-          {/* --- Información General --- */}
-          <h4 style={sectionTitleStyle}>Información General</h4>
-          <div style={gridSectionContainerStyle}>
-            <div style={fieldContainerStyle}>
-              <label htmlFor="Codigo_Producto" style={labelStyle}>Código Producto:</label>
-              <input id="Codigo_Producto" type="text" name="Codigo_Producto" value={formData.Codigo_Producto || ''} onChange={handleInputChange} style={inputBaseStyle} disabled />
-            </div>
-            <div style={fieldContainerStyle}>
-              <label htmlFor="producto" style={labelStyle}>Producto (Tipo General):</label>
-              <input id="producto" type="text" name="producto" value={formData.producto || ''} onChange={handleInputChange} style={inputBaseStyle} />
-            </div>
-            <div style={fieldContainerStyle}> 
-              <label htmlFor="tipo" style={labelStyle}>Tipo:</label>
-              <select 
-                id="tipo" 
-                name="tipo" 
-                value={formData.tipo || 'equipo'} 
-                onChange={handleInputChange} 
-                style={inputBaseStyle}
-              >
-                <option value="equipo">Equipo</option>
-                <option value="opcional">Opcional</option>
-              </select>
-            </div>
-            <div style={{ ...fieldContainerStyle, gridColumn: 'span 2' }}>
-              <label htmlFor="descripcion" style={labelStyle}>Descripción:</label>
-              <textarea id="descripcion" name="descripcion" value={formData.descripcion || ''} onChange={handleInputChange} style={{...inputBaseStyle, minHeight: '80px'}} />
+  // Helper para renderizar campos dinámicos
+  const renderDynamicFields = (obj: any, parentKey = '', onChange: any) => {
+    if (!obj || typeof obj !== 'object') return null;
+    return Object.entries(obj).map(([key, value]) => {
+      // No mostrar campos internos de Mongo ni __v
+      if (["_id", "createdAt", "updatedAt", "__v"].includes(key)) return null;
+      const fullKey = parentKey ? `${parentKey}.${key}` : key;
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        // Renderizar sección anidada
+        return (
+          <div key={fullKey} style={{ marginBottom: 16, padding: '10px 0', borderTop: '1px solid #eee' }}>
+            <label style={{ ...labelStyle, fontWeight: 600 }}>{key.replace(/_/g, ' ').toUpperCase()}:</label>
+            <div style={{ marginLeft: 12 }}>
+              {renderDynamicFields(value, fullKey, onChange)}
             </div>
           </div>
-
-          {/* --- Características --- */}
-          <h4 style={sectionTitleStyle}>Características</h4>
-          <div style={gridSectionContainerStyle}>
-            <div style={{ ...fieldContainerStyle, gridColumn: 'span 2' }}> {/* Nombre del producto puede ocupar más */} 
-              <label htmlFor="caracteristicas.nombre_del_producto" style={labelStyle}>Nombre del Producto (Característica):</label>
-              <input id="caracteristicas.nombre_del_producto" type="text" name="caracteristicas.nombre_del_producto" value={formData.caracteristicas?.nombre_del_producto || ''} onChange={handleInputChange} style={inputBaseStyle} />
-            </div>
-            <div style={fieldContainerStyle}>
-              <label htmlFor="caracteristicas.modelo" style={labelStyle}>Modelo (Característica):</label>
-              <input id="caracteristicas.modelo" type="text" name="caracteristicas.modelo" value={formData.caracteristicas?.modelo || ''} onChange={handleInputChange} style={inputBaseStyle} />
-            </div>
+        );
+      } else if (typeof value === 'boolean') {
+        // Checkbox para booleanos
+        return (
+          <div key={fullKey} style={fieldContainerStyle}>
+            <label style={labelStyle}>
+              <input
+                type="checkbox"
+                name={fullKey}
+                checked={!!value}
+                onChange={e => onChange({ target: { name: fullKey, value: e.target.checked, type: 'checkbox' } })}
+                style={improvedCheckboxStyle}
+              />
+              {key.replace(/_/g, ' ')}
+            </label>
           </div>
-
-          {/* --- Dimensiones --- */}
-          <h4 style={sectionTitleStyle}>Dimensiones</h4>
-          <div style={gridSectionContainerStyle}>
-            <div style={fieldContainerStyle}>
-              <label htmlFor="dimensiones.largo_mm" style={labelStyle}>Largo (mm):</label>
-              <input id="dimensiones.largo_mm" type="number" name="dimensiones.largo_mm" value={formData.dimensiones?.largo_mm || ''} onChange={handleInputChange} style={inputBaseStyle} />
-            </div>
-            <div style={fieldContainerStyle}>
-              <label htmlFor="dimensiones.ancho_mm" style={labelStyle}>Ancho (mm):</label>
-              <input id="dimensiones.ancho_mm" type="number" name="dimensiones.ancho_mm" value={formData.dimensiones?.ancho_mm || ''} onChange={handleInputChange} style={inputBaseStyle} />
-            </div>
-            <div style={fieldContainerStyle}>
-              <label htmlFor="dimensiones.alto_mm" style={labelStyle}>Alto (mm):</label>
-              <input id="dimensiones.alto_mm" type="number" name="dimensiones.alto_mm" value={formData.dimensiones?.alto_mm || ''} onChange={handleInputChange} style={inputBaseStyle} />
-            </div>
-            <div style={fieldContainerStyle}>
-              <label htmlFor="peso_kg" style={labelStyle}>Peso (kg):</label>
-              <input id="peso_kg" type="number" name="peso_kg" value={formData.peso_kg || ''} onChange={handleInputChange} style={inputBaseStyle} />
-            </div>
-          </div>
-
-          {/* --- Datos Contables --- */}
-          <h4 style={sectionTitleStyle}>Datos Contables</h4>
-          <div style={gridSectionContainerStyle}>
-            <div style={fieldContainerStyle}>
-              <label htmlFor="datos_contables.costo_fabrica" style={labelStyle}>Costo Fábrica (EUR):</label>
-              <input id="datos_contables.costo_fabrica" type="number" name="datos_contables.costo_fabrica" value={formData.datos_contables?.costo_fabrica || ''} onChange={handleInputChange} style={inputBaseStyle} step="0.01" />
-            </div>
-            <div style={fieldContainerStyle}>
-              <label htmlFor="datos_contables.divisa_costo" style={labelStyle}>Divisa Costo:</label>
-              <input id="datos_contables.divisa_costo" type="text" name="datos_contables.divisa_costo" value={formData.datos_contables?.divisa_costo || ''} onChange={handleInputChange} style={inputBaseStyle} />
-            </div>
-            <div style={fieldContainerStyle}>
-              <label htmlFor="datos_contables.fecha_cotizacion" style={labelStyle}>Fecha Cotización:</label>
-              <input id="datos_contables.fecha_cotizacion" type="date" name="datos_contables.fecha_cotizacion" value={formData.datos_contables?.fecha_cotizacion || ''} onChange={handleInputChange} style={inputBaseStyle} />
-            </div>
-          </div>
-
-          {/* --- Especificaciones Técnicas (Se abordará en Paso B) --- */}
-          <h4 style={sectionTitleStyle}>Especificaciones Técnicas</h4>
-          {formData.especificaciones_tecnicas && Object.keys(formData.especificaciones_tecnicas).length > 0 && (
-            <div style={{ marginBottom: '20px' }}> {/* Contenedor general para las especificaciones renderizadas */}
-              {renderEspecificaciones(formData.especificaciones_tecnicas)}
-            </div>
-          )}
-          <div style={{ border: '1px solid #e0e0e0', padding: '15px', borderRadius: '6px', marginTop: '10px' }}>
-            <h5 style={{marginTop: 0, marginBottom: '15px', fontSize: '16px', color: '#444'}}>Añadir Nueva Especificación</h5>
-            <div style={fieldContainerStyle}>
-                <label htmlFor="newSpecSection" style={labelStyle}>Sección (Opcional, ej: DIMENSIONES):</label>
-                <input id="newSpecSection" type="text" value={newSpecSection} onChange={(e) => setNewSpecSection(e.target.value)} placeholder="Ej: MOTOR" style={inputBaseStyle} />
-            </div>
-            <div style={fieldContainerStyle}>
-                <label htmlFor="newSpecKey" style={labelStyle}>Nombre Característica:</label>
-                <input id="newSpecKey" type="text" value={newSpecKey} onChange={(e) => setNewSpecKey(e.target.value)} placeholder="Ej: Cilindrada" style={inputBaseStyle} />
-            </div>
-            <div style={fieldContainerStyle}>
-                <label htmlFor="newSpecValue" style={labelStyle}>Valor Especificación:</label>
-                <input id="newSpecValue" type="text" value={newSpecValue} onChange={(e) => setNewSpecValue(e.target.value)} placeholder="Ej: 200 cc" style={inputBaseStyle} />
-            </div>
-            <button type="button" onClick={handleAddSpec} style={{ padding: '8px 15px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginTop: '10px' }}>
-              Añadir Especificación
-            </button>
-          </div>
-
-          {/* --- Observación --- */}
-          <h4 style={sectionTitleStyle}>Observación de Edición</h4>
-          <div style={fieldContainerStyle}> {/* La observación debería ocupar todo el ancho, no necesita estar en rejilla si es única */} 
-            <label htmlFor="ultimaObservacion" style={labelStyle}>Última Observación:</label>
-            <textarea
-              id="ultimaObservacion"
-              value={ultimaObservacion}
-              onChange={(e) => setUltimaObservacion(e.target.value)}
-              placeholder="Añada una observación sobre esta edición si es necesario..."
-              style={{ ...inputBaseStyle, minHeight: '100px' }}
+        );
+      } else {
+        // Input para string/number
+        return (
+          <div key={fullKey} style={fieldContainerStyle}>
+            <label htmlFor={fullKey} style={labelStyle}>{key.replace(/_/g, ' ')}:</label>
+            <input
+              id={fullKey}
+              type={typeof value === 'number' ? 'number' : 'text'}
+              name={fullKey}
+              value={value ?? ''}
+              onChange={onChange}
+              style={inputBaseStyle}
             />
           </div>
+        );
+      }
+    });
+  };
 
-          {/* --- Botones de Acción --- */}
-          <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #eee', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-            <button type="button" onClick={onClose} style={{ padding: '10px 20px', backgroundColor: '#7f8c8d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+  return (
+    <div style={unifiedModalOverlayStyle}>
+      <div style={unifiedModalContentStyle}>
+        <div style={unifiedHeaderStyle}>
+          <div style={unifiedTitleStyle}>
+            Editar Producto: {formData.Codigo_Producto || formData.codigo_producto}
+          </div>
+          <button onClick={onClose} style={{ ...unifiedSecondaryButtonStyle, backgroundColor: 'transparent', color: 'white', border: 'none', fontSize: '18px' }}>×</button>
+        </div>
+        <form onSubmit={handleSubmit} style={{display:'flex', flexDirection:'column', height:'100%'}}>
+          <div style={unifiedBodyStyle}>
+            <h4 style={improvedSectionTitleStyle}>Todos los Datos del Producto</h4>
+            <div style={{ maxHeight: 500, overflowY: 'auto', paddingRight: 10 }}>
+              {renderDynamicFields(formData, '', handleInputChange)}
+            </div>
+          </div>
+          <div style={unifiedFooterStyle}>
+            <button type="button" onClick={onClose} style={unifiedSecondaryButtonStyle}>
               Cancelar
             </button>
-            <button type="submit" style={{ padding: '10px 20px', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+            <button type="submit" style={unifiedPrimaryButtonStyle}>
               Guardar Cambios
             </button>
           </div>
