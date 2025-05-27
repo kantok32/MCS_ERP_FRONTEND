@@ -711,7 +711,7 @@ export default function EquiposPanel() {
     setIsDeleting(true);
     setDeleteError(null);
     try {
-      const response = await fetch(`https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/code/${equipoParaEliminar.codigo_producto}`, {
+      const response = await fetch(`${BACKEND_URL}/api/products/code/${equipoParaEliminar.codigo_producto}`, {
         method: 'DELETE'
       });
       const responseData = await response.json(); 
