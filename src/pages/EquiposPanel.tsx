@@ -1242,6 +1242,7 @@ export default function EquiposPanel() {
           onClose={handleCloseEditModal}
           producto={equipoParaEditar} // Asegúrate que productoParaEditar no sea null aquí
           onSaveSuccess={handleSaveSuccessEquipoEditModal}
+          backendUrl={BACKEND_URL} // <-- Pasar la URL del backend
         />
       )}
       {/* --- FIN MODAL PARA EDITAR Equipo --- */}

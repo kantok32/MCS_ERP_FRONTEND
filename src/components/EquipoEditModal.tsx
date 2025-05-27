@@ -11,6 +11,7 @@ interface EquipoEditModalProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   producto: any | null; // Debería ser 'Producto | null' con tipos definidos
   onSaveSuccess: () => void;
+  backendUrl: string; // <-- Agregar la URL del backend
 }
 
 // Estilos base reutilizables
@@ -227,7 +228,7 @@ const unifiedFooterStyle: React.CSSProperties = { display: 'flex', justifyConten
 const unifiedSecondaryButtonStyle: React.CSSProperties = { padding: '8px 16px', borderRadius: '6px', border: '1px solid #D1D5DB', backgroundColor: 'white', color: '#374151', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 500 };
 const unifiedPrimaryButtonStyle: React.CSSProperties = { ...unifiedSecondaryButtonStyle, backgroundColor: '#1e88e5', color: 'white', borderColor: '#1e88e5' };
 
-const EquipoEditModal: React.FC<EquipoEditModalProps> = ({ open, onClose, producto, onSaveSuccess }) => {
+const EquipoEditModal: React.FC<EquipoEditModalProps> = ({ open, onClose, producto, onSaveSuccess, backendUrl }) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [formData, setFormData] = useState<any>({}); // Debería ser 'Partial<Producto>'
   const [ultimaObservacion, setUltimaObservacion] = useState('');
@@ -404,7 +405,7 @@ const EquipoEditModal: React.FC<EquipoEditModalProps> = ({ open, onClose, produc
     // delete payload.updatedAt;
 
     try {
-      const response = await fetch(`/api/products/code/${producto.Codigo_Producto}`, {
+      const response = await fetch(`${backendUrl}/api/products/code/${producto.Codigo_Producto}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
