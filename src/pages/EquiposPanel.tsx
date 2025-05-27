@@ -240,6 +240,13 @@ const normalizeModeloString = (str: string) => { // <<< CORRECCIÓN DE TIPADO
   return str.toLowerCase().replace(/[\s-]+/g, ''); // Convierte a minúsculas y quita espacios y guiones
 };
 
+function getTipoChipeadora(nombreProducto) {
+  if (!nombreProducto) return null;
+  if (nombreProducto.toUpperCase().includes('PTO')) return 'Chipeadora PTO';
+  if (nombreProducto.toUpperCase().includes('MOTOR')) return 'Chipeadora Motor';
+  return null;
+}
+
 export default function EquiposPanel() {
   // Estados principales (movidos de App.tsx)
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -1359,8 +1366,18 @@ export default function EquiposPanel() {
                           const asignaciones = String(opcional.asignado_a_codigo_principal)
                             .split('/')
                             .map(s => s.trim().toLowerCase());
-                          // Mostrar si alguna asignación coincide con el modelo base
-                          return asignaciones.includes(modeloPrincipalBase);
+                          // Primer filtro: asignación por modelo base
+                          const asignado = asignaciones.includes(modeloPrincipalBase);
+                          if (!asignado) return false;
+                          // Solo aplicar el filtro de tipo de chipeadora si el producto principal es una chipeadora
+                          const nombrePrincipal = productoParaVistaOpcionales.nombre_del_producto?.toUpperCase() || '';
+                          if (nombrePrincipal.includes('CHIPEADORA')) {
+                            const tipoChipeadora = getTipoChipeadora(productoParaVistaOpcionales.nombre_del_producto);
+                            if (!tipoChipeadora) return false;
+                            return (opcional.producto === tipoChipeadora);
+                          }
+                          // Para otros productos, solo el filtro de asignación
+                          return true;
                         })
                         .map((opcional, index) => (
                           <tr key={opcional.codigo_producto || `opc-${index}`} style={{ borderBottom: '1px solid #e5e7eb' }}>

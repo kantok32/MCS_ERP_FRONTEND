@@ -17,6 +17,7 @@ interface LocationStateFromPrevPage {
   selectedProfileId: string | null;
   nombrePerfil?: string;
   anoEnCursoGlobal: number;
+  historialId?: string;
 }
 
 // Estado para los nuevos datos del formulario
@@ -30,6 +31,10 @@ interface CotizacionFormData {
   emisorNombre: string; // Nombre del creador del presupuesto
   emisorAreaComercial: string;
   emisorEmail: string; // Email del creador (asumo)
+  // Receptor (Cliente)
+  receptorNombre: string;
+  receptorAreaComercial: string;
+  receptorEmail: string;
   // Comentarios
   comentariosAdicionales: string;
 }
@@ -39,6 +44,7 @@ export default function ConfiguracionPanel() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [calculosData, setCalculosData] = useState<LocationStateFromPrevPage | null>(null);
+  const [historialId, setHistorialId] = useState<string | null>(null);
   const [formData, setFormData] = useState<CotizacionFormData>({
     numeroCotizacion: '', // Podría ser generado o sugerido
     referenciaDocumento: '',
@@ -47,12 +53,16 @@ export default function ConfiguracionPanel() {
     emisorNombre: 'ADMIN', // <--- VALOR POR DEFECTO
     emisorAreaComercial: 'Ecoalliance', // <--- VALOR POR DEFECTO
     emisorEmail: 'Ecoalliance33@gmail.com', // <--- VALOR POR DEFECTO
+    receptorNombre: '',
+    receptorAreaComercial: '',
+    receptorEmail: '',
     comentariosAdicionales: '',
   });
 
   useEffect(() => {
     if (location.state) {
       setCalculosData(location.state as LocationStateFromPrevPage);
+      setHistorialId(location.state.historialId || null);
       // Podríamos pre-rellenar numeroCotizacion aquí si tenemos una lógica para ello
       // setFormData(prev => ({ ...prev, numeroCotizacion: `COT-${Date.now()}` }));
     } else {
@@ -67,61 +77,108 @@ export default function ConfiguracionPanel() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleGenerarPdf = async () => {
+  const handleGenerarInforme = () => {
     if (!calculosData) {
       alert('Faltan los datos de cálculo base.');
       return;
     }
-    setIsLoading(true);
-
-    // Crear el payload para el backend
-    const payload = {
-      ...calculosData, // Esto incluye itemsParaCotizar, resultadosCalculados, etc.
-      cotizacionDetails: formData // Esto incluye todos los campos del formulario actual
-    };
-
-    console.log('Enviando al backend:', payload);
-
-    try {
-      const response = await fetch('/api/calculo-historial/guardar-y-exportar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        // Intentar obtener un mensaje de error más detallado del backend si es posible
-        let errorMessage = 'Error del servidor al generar PDF.';
-        try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-        } catch (e) {
-            // Si el cuerpo no es JSON o está vacío, usar el texto de estado
-            errorMessage = response.statusText || errorMessage;
-        }
-        throw new Error(errorMessage);
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      // Construir un nombre de archivo más descriptivo
-      const nombreArchivo = `Configuracion_${formData.numeroCotizacion || 'Calculo'}_${new Date().toISOString().split('T')[0]}.pdf`;
-      a.download = nombreArchivo.replace(/[^a-z0-9_.-]/gi, '_'); // Sanitizar nombre de archivo
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-
-      alert('Cotización PDF generada y descarga iniciada.');
-
-    } catch (error: any) {
-      console.error('Error al generar PDF:', error);
-      alert(`Error al generar PDF: ${error.message}`);
-    } finally {
-      setIsLoading(false);
+    // Helper para formatear CLP
+    function formatCLP(value) {
+      if (typeof value !== 'number' || isNaN(value)) return '-';
+      return '$' + value.toLocaleString('es-CL', { minimumFractionDigits: 0 });
     }
+    // Generar el HTML usando los datos del formulario y los equipos
+    const numeroDocumento = historialId ? `${historialId}` : '-';
+    const html = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Informe de Configuración</title>
+        <style>
+          body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #222; margin: 0; padding: 0; }
+          .container { max-width: 900px; margin: 40px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 32px; }
+          h1 { color: #1976d2; margin-bottom: 8px; }
+          h2 { color: #2196f3; margin-top: 32px; margin-bottom: 12px; }
+          .section { margin-bottom: 32px; }
+          .row { display: flex; gap: 32px; }
+          .col { flex: 1; }
+          .label { font-weight: 600; color: #555; margin-bottom: 2px; }
+          .value { margin-bottom: 10px; }
+          .box { background: #f3f4f6; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+          .comentarios { background: #f8fafc; border-radius: 6px; padding: 12px; margin-top: 8px; }
+          .footer { text-align: center; color: #888; margin-top: 40px; font-size: 0.95em; }
+          table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+          th, td { padding: 10px 8px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+          th { background: #f3f4f6; color: #1976d2; font-size: 1.05em; }
+          .opcional-row td { color: #555; padding-left: 32px; font-style: italic; }
+          .precio { text-align: right; font-weight: 500; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>Informe de Configuración</h1>
+          <div style="margin-bottom:18px;font-size:1.1em;"><b>Número:</b> ${numeroDocumento}</div>
+          <div class="section row">
+            <div class="col box">
+              <div class="label">Emisor</div>
+              <div class="value"><b>Nombre:</b> ${formData.emisorNombre || '-'}</div>
+              <div class="value"><b>Área Comercial:</b> ${formData.emisorAreaComercial || '-'}</div>
+              <div class="value"><b>Email:</b> ${formData.emisorEmail || '-'}</div>
+            </div>
+            <div class="col box">
+              <div class="label">Receptor</div>
+              <div class="value"><b>Nombre:</b> ${formData.receptorNombre || '-'}</div>
+              <div class="value"><b>Área Comercial:</b> ${formData.receptorAreaComercial || '-'}</div>
+              <div class="value"><b>Email:</b> ${formData.receptorEmail || '-'}</div>
+            </div>
+          </div>
+          <div class="section">
+            <div class="label">Comentarios Adicionales</div>
+            <div class="comentarios">${formData.comentariosAdicionales ? formData.comentariosAdicionales.replace(/\n/g, '<br>') : '-'}</div>
+          </div>
+          <div class="section">
+            <h2>Resumen de Equipos Calculados</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Artículo / Descripción</th>
+                  <th class="precio">Precio Final</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${calculosData.itemsParaCotizar.map((item, idx) => {
+                  const keyPrincipal = `principal-${item.principal.codigo_producto || idx}`;
+                  const principalCalc = calculosData.resultadosCalculados?.[keyPrincipal];
+                  const precioPrincipal = principalCalc?.calculados?.precios_cliente?.precioVentaTotalClienteCLP;
+                  let opcionalesHtml = '';
+                  if (item.opcionales && item.opcionales.length > 0) {
+                    opcionalesHtml = item.opcionales.map((opc, opIdx) => {
+                      const keyOpc = `opcional-${opc.codigo_producto || opIdx}`;
+                      const opcCalc = calculosData.resultadosCalculados?.[keyOpc];
+                      const precioOpc = opcCalc?.calculados?.precios_cliente?.precioVentaTotalClienteCLP;
+                      return `<tr class='opcional-row'><td>${opc.nombre_del_producto || 'Opcional sin nombre'}</td><td class='precio'>${formatCLP(precioOpc)}</td></tr>`;
+                    }).join('');
+                  }
+                  return `
+                    <tr><td><b>${item.principal.nombre_del_producto || 'Equipo sin nombre'}</b></td><td class='precio'>${formatCLP(precioPrincipal)}</td></tr>
+                    ${opcionalesHtml}
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+            <div style="margin-top: 10px; color: #555;">Total de equipos principales: ${calculosData.itemsParaCotizar.length}</div>
+          </div>
+          <div class="footer">
+            Informe generado automáticamente por el sistema MCS ERP<br>
+            &copy; ${new Date().getFullYear()} MCS ERP - Todos los derechos reservados
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    navigate('/documento_html', { state: { html, pdfFileName: `${numeroDocumento}.pdf` } });
   };
 
   if (!calculosData) {
@@ -139,12 +196,27 @@ export default function ConfiguracionPanel() {
           Configurar Datos
         </Typography>
 
-        {/* SECCIÓN DATOS DEL EMISOR */}
-        <Typography variant="h6" sx={sectionTitleStyle}>Datos del Emisor</Typography>
+        {/* SECCIÓN DATOS DEL EMISOR Y RECEPTOR */}
+        <Typography variant="h6" sx={sectionTitleStyle}>Datos del Emisor y Receptor</Typography>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={4}><TextField fullWidth label="Presupuesto Creado por" name="emisorNombre" value={formData.emisorNombre} onChange={handleChange} /></Grid>
-          <Grid item xs={12} sm={4}><TextField fullWidth label="Área Comercial" name="emisorAreaComercial" value={formData.emisorAreaComercial} onChange={handleChange} /></Grid>
-          <Grid item xs={12} sm={4}><TextField fullWidth label="Email Emisor" name="emisorEmail" type="email" value={formData.emisorEmail} onChange={handleChange} /></Grid>
+          {/* Emisor */}
+          <Grid item xs={12} sm={6}>
+            <Paper variant="outlined" sx={{ p: 2, height: '100%' }}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Emisor</Typography>
+              <TextField fullWidth label="Presupuesto Creado por" name="emisorNombre" value={formData.emisorNombre} onChange={handleChange} sx={{ mb: 2 }} />
+              <TextField fullWidth label="Área Comercial" name="emisorAreaComercial" value={formData.emisorAreaComercial} onChange={handleChange} sx={{ mb: 2 }} />
+              <TextField fullWidth label="Email Emisor" name="emisorEmail" type="email" value={formData.emisorEmail} onChange={handleChange} />
+            </Paper>
+          </Grid>
+          {/* Receptor */}
+          <Grid item xs={12} sm={6}>
+            <Paper variant="outlined" sx={{ p: 2, height: '100%' }}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Receptor</Typography>
+              <TextField fullWidth label="Nombre del Cliente" name="receptorNombre" value={formData.receptorNombre} onChange={handleChange} sx={{ mb: 2 }} />
+              <TextField fullWidth label="Área Comercial Cliente" name="receptorAreaComercial" value={formData.receptorAreaComercial} onChange={handleChange} sx={{ mb: 2 }} />
+              <TextField fullWidth label="Email Cliente" name="receptorEmail" type="email" value={formData.receptorEmail} onChange={handleChange} />
+            </Paper>
+          </Grid>
         </Grid>
 
         {/* SECCIÓN COMENTARIOS Y CONDICIONES MODIFICADA */}
@@ -189,7 +261,7 @@ export default function ConfiguracionPanel() {
             variant="contained" 
             color="primary" 
             startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <DownloadCloud />} 
-            onClick={handleGenerarPdf} 
+            onClick={handleGenerarInforme}
             disabled={isLoading}
           >
             {isLoading ? 'Generando Informe...' : 'Generar Informe'}

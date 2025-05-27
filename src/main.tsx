@@ -18,6 +18,7 @@ import ResumenCargaPanel from './pages/ResumenCargaPanel'
 import LoginPage from './pages/LoginPage'
 import HistorialPage from './pages/HistorialPage'
 import HistorialDetallePage from './pages/HistorialDetallePage'
+import DocumentoHtmlPage from './pages/DocumentoHtmlPage'
 // import CargaManualEquiposPage from './pages/CargaManualEquiposPage'
 // import DetallesEnvioPanel from './pages/DetallesEnvioPanel'; // Comentado si no se usa directamente aquí
 
@@ -75,6 +76,7 @@ const AnimatedRoutes = () => {
           <Route path="resumen-carga" element={<AnimatedPage><ResumenCargaPanel /></AnimatedPage>} />
           <Route path="historial" element={<AnimatedPage><HistorialPage /></AnimatedPage>} />
           <Route path="historial/:id" element={<AnimatedPage><HistorialDetallePage /></AnimatedPage>} />
+          <Route path="/documento_html" element={<DocumentoHtmlPage />} />
         </Route>
       </Routes>
     </AnimatePresence>
