@@ -356,7 +356,7 @@ export default function CargaEquiposPanel() {
   // Función para carga de equipos (formato tabla)
   const handleUploadEquipos = async (file: File) => {
     try {
-      const formData = new FormData();
+    const formData = new FormData();
       formData.append('archivoExcelPlain', file);
       const response = await fetch(`${BACKEND_URL}/api/products/upload-plain`, {
         method: 'POST',
@@ -404,7 +404,7 @@ export default function CargaEquiposPanel() {
     if (!fileExtension || !['xlsx', 'xls', 'csv'].includes(fileExtension)) {
       setUploadStatus({ type: 'error', message: 'Por favor, seleccione un archivo Excel (.xlsx, .xls) o CSV (.csv).' });
       return;
-    }
+      }
     if (selectedFile.size > 10 * 1024 * 1024) {
       setUploadStatus({ type: 'error', message: 'El archivo no debe superar los 10MB.' });
       return;

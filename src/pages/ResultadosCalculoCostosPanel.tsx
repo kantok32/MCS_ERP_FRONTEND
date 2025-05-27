@@ -265,7 +265,8 @@ const fetchCalculoDetallado = async (
   profileId: string,
   anoEnCurso: number,
   tcEurUsd: number,
-  nombrePerfil: string
+  nombrePerfil: string,
+  perfilesList: CostoPerfilData[]
 ): Promise<CalculationResult> => {
   // Extraer los datos correctamente del producto
   // 1. costo_fabrica
@@ -302,14 +303,24 @@ const fetchCalculoDetallado = async (
     }
   }
   const anoCotizacion = parsedYear !== undefined ? parsedYear : anoEnCurso - 1;
+
+  // Obtener el perfil actual para asegurar que usamos la tasa de seguro correcta
+  const perfilActual = perfilesList.find(p => p._id === profileId);
+  if (!perfilActual) {
+    console.error('[fetchCalculoDetallado] No se encontró el perfil con ID:', profileId);
+    throw new Error('Perfil no encontrado');
+  }
+
   const payload = {
     profileId: profileId,
     anoCotizacion: anoCotizacion,
     anoEnCurso: anoEnCurso,
     costoFabricaOriginalEUR: costoFabricaOriginalEUR,
-    tipoCambioEurUsdActual: tcEurUsd,
+    tipoCambioEurUsdActual: tcEurUsd, // Usar el tipo de cambio obtenido de la API
     codigo_producto: codigo_producto,
+    tasa_seguro_pct: perfilActual.tasa_seguro_pct, // Usar la tasa de seguro del perfil
   };
+
   const API_BASE_URL = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api';
   const CALCULATION_ENDPOINT = `${API_BASE_URL}/costo-perfiles/calcular-producto`;
   console.log('[ResultadosCalculoCostosPanel] Enviando payload a calcular-producto:', payload);
@@ -381,6 +392,8 @@ export default function ResultadosCalculoCostosPanel() {
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const [savedCalculoId, setSavedCalculoId] = useState<string | null>(null);
   const [latestCalculatedResults, setLatestCalculatedResults] = useState<Record<string, CalculationResult> | null>(null);
+  const [tipoCambioEurUsd, setTipoCambioEurUsd] = useState<number | null>(null);
+  const [isLoadingTipoCambio, setIsLoadingTipoCambio] = useState(false);
 
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const [perfilesList, setPerfilesList] = useState<CostoPerfilData[]>([]);
@@ -448,8 +461,60 @@ export default function ResultadosCalculoCostosPanel() {
     }
   };
 
+  const obtenerTipoCambioEurUsd = async () => {
+    setIsLoadingTipoCambio(true);
+    try {
+      console.log('[ResultadosCalculoCostosPanel] Iniciando petición para obtener tipo de cambio EUR/USD...');
+      const response = await fetch('https://n8n-807184488368.southamerica-west1.run.app/webhook/8012d60e-8a29-4910-b385-6514edc3d912');
+      
+      if (!response.ok) {
+        console.error('[ResultadosCalculoCostosPanel] Error en la respuesta HTTP:', response.status, response.statusText);
+        throw new Error(`Error al obtener el tipo de cambio EUR/USD: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('[ResultadosCalculoCostosPanel] Respuesta del webhook:', data);
+
+      // Verificar si la respuesta tiene el formato esperado
+      if (!data || typeof data !== 'object') {
+        throw new Error('La respuesta del webhook no es un objeto válido');
+      }
+
+      // Verificar si tenemos los valores necesarios
+      if (!data.Valor_Euro || !data.Valor_Dolar) {
+        console.error('[ResultadosCalculoCostosPanel] Datos recibidos:', data);
+        throw new Error('El objeto no contiene los valores esperados (Valor_Euro o Valor_Dolar)');
+      }
+
+      // Calcular el tipo de cambio EUR/USD
+      const valorEuro = parseFloat(data.Valor_Euro);
+      const valorDolar = parseFloat(data.Valor_Dolar);
+      
+      if (isNaN(valorEuro) || isNaN(valorDolar) || valorDolar === 0) {
+        console.error('[ResultadosCalculoCostosPanel] Valores inválidos:', { valorEuro, valorDolar });
+        throw new Error('Los valores de divisas no son números válidos');
+      }
+
+      const tipoCambioEurUsd = valorEuro / valorDolar;
+      console.log('[ResultadosCalculoCostosPanel] Tipo de cambio EUR/USD calculado:', tipoCambioEurUsd);
+      setTipoCambioEurUsd(tipoCambioEurUsd);
+      
+    } catch (error) {
+      console.error('[ResultadosCalculoCostosPanel] Error al obtener tipo de cambio EUR/USD:', error);
+      setErrorCarga('Error al obtener el tipo de cambio EUR/USD. Por favor, intente nuevamente.');
+      // Mantener el último valor válido si existe
+      if (!tipoCambioEurUsd) {
+        console.warn('[ResultadosCalculoCostosPanel] Usando valor por defecto para tipo de cambio EUR/USD');
+        setTipoCambioEurUsd(1.117564); // Valor por defecto como fallback
+      }
+    } finally {
+      setIsLoadingTipoCambio(false);
+    }
+  };
+
   useEffect(() => {
     cargarPerfilesDesdeAPI();
+    obtenerTipoCambioEurUsd();
   }, [state?.selectedProfileId]);
 
   useEffect(() => {
@@ -480,76 +545,83 @@ export default function ResultadosCalculoCostosPanel() {
     setIsLoading(false);
   }, [state?.productosConOpcionalesSeleccionados]);
   
-  const realizarCalculoDetallado = useCallback(async (lineasParaCalcular: LineaDeTrabajoConCosto[]): Promise<LineaDeTrabajoConCosto[] | null> => {
-    if (!currentProfileData || lineasParaCalcular.length === 0) {
-        setErrorCarga("Seleccione un perfil y asegúrese de que haya productos cargados para calcular.");
-        return null; 
+  const realizarCalculoDetallado = async (lineas: LineaDeTrabajoConCosto[]): Promise<LineaDeTrabajoConCosto[] | null> => {
+    if (!currentProfileData) {
+      setErrorCarga("No hay un perfil de costo seleccionado.");
+      return null;
     }
 
-    setErrorCarga(null);
-    setSaveSuccessMessage(null); 
-    setSaveErrorMessage(null);
-    setSavedCalculoId(null);
+    if (!tipoCambioEurUsd) {
+      setErrorCarga("No se pudo obtener el tipo de cambio EUR/USD. Por favor, intente nuevamente.");
+      return null;
+    }
 
-    const tcEurUsdActual = 1.117564; 
+    const nuevasLineas = await Promise.all(
+      lineas.map(async (linea) => {
+        try {
+          // Calcular para el producto principal
+          const detalleCalculoPrincipal = await fetchCalculoDetallado(
+            linea.principal,
+            linea.principal.datos_contables?.costo_fabrica || 0,
+            linea.principal.datos_contables?.fecha_cotizacion,
+            currentProfileData._id,
+            anoActualGlobal,
+            tipoCambioEurUsd,
+            currentProfileData.nombre_perfil,
+            perfilesList
+          );
 
-    const getFechaCotizacionAsString = (fecha: string | Date | undefined): string | undefined => {
-        if (typeof fecha === 'string' || fecha === undefined) return fecha;
-        if (fecha instanceof Date) return fecha.toISOString();
-        return undefined;
-    };
-
-    try {
-      const lineasConDetallePromises = lineasParaCalcular.map(async (lineaExistente) => {
-        const detallePrincipal = await fetchCalculoDetallado(
-          lineaExistente.principal,
-          lineaExistente.principal.datos_contables?.costo_fabrica || 0,
-          getFechaCotizacionAsString(lineaExistente.principal.datos_contables?.fecha_cotizacion),
-          currentProfileData._id,
-          anoActualGlobal,
-          tcEurUsdActual,
-          currentProfileData.nombre_perfil
-        );
-
-        let detallesOpcionalesResultados: CalculationResult[] | undefined = undefined;
-        if (lineaExistente.opcionales && lineaExistente.opcionales.length > 0) {
-            const detallesOpcPromises = lineaExistente.opcionales.map(opcional => 
+          // Calcular para los opcionales
+          const detallesCalculoOpcionales = await Promise.all(
+            linea.opcionales.map(opcional =>
               fetchCalculoDetallado(
                 opcional,
                 opcional.datos_contables?.costo_fabrica || 0,
-                getFechaCotizacionAsString(opcional.datos_contables?.fecha_cotizacion),
+                opcional.datos_contables?.fecha_cotizacion,
                 currentProfileData._id,
                 anoActualGlobal,
-                tcEurUsdActual,
-                currentProfileData.nombre_perfil
+                tipoCambioEurUsd,
+                currentProfileData.nombre_perfil,
+                perfilesList
               )
-            );
-            detallesOpcionalesResultados = await Promise.all(detallesOpcPromises);
+            )
+          );
+
+          return {
+            ...linea,
+            detalleCalculoPrincipal,
+            detallesCalculoOpcionales,
+          };
+        } catch (error) {
+          console.error('[ResultadosCalculoCostosPanel] Error en cálculo detallado:', error);
+          setErrorCarga(`Error al calcular costos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+          return null;
         }
-        
-        const precioCLPPrincipal = detallePrincipal?.calculados?.precios_cliente?.precioVentaTotalClienteCLP;
+      })
+    );
 
-        return {
-          ...lineaExistente,
-          detalleCalculoPrincipal: detallePrincipal,
-          detallesCalculoOpcionales: detallesOpcionalesResultados,
-          precioVentaTotalClienteCLPPrincipal: typeof precioCLPPrincipal === 'number' ? precioCLPPrincipal : undefined,
-        };
-      });
+    // Filtrar las líneas que fallaron
+    const lineasValidas = nuevasLineas.filter((linea): linea is LineaDeTrabajoConCosto => linea !== null);
 
-      return await Promise.all(lineasConDetallePromises);
-    } catch (error: any) {
-      console.error("[ResultadosCalculoCostosPanel] Error en realizarCalculoDetallado (Promise.all):", error);
-      setErrorCarga(error.message || "Ocurrió un error durante el cálculo detallado.");
-      return null; 
+    if (lineasValidas.length === 0) {
+      setErrorCarga("No se pudo calcular ninguna línea. Por favor, verifique los datos e intente nuevamente.");
+      return null;
     }
-  }, [currentProfileData, anoActualGlobal]);
+
+    return lineasValidas;
+  };
 
   const handleCalcular = async () => {
     if (!currentProfileData) {
       setErrorCarga("Por favor, seleccione un perfil de costo primero para calcular.");
       return;
     }
+
+    if (!tipoCambioEurUsd) {
+      setErrorCarga("No se pudo obtener el tipo de cambio EUR/USD. Por favor, intente nuevamente.");
+      return;
+    }
+
     const lineasActualesParaCalculo = [...lineasCalculadas];
 
     if (!state?.productosConOpcionalesSeleccionados || state.productosConOpcionalesSeleccionados.length === 0 || lineasActualesParaCalculo.length === 0) {
@@ -651,6 +723,7 @@ export default function ResultadosCalculoCostosPanel() {
     setSavedCalculoId(null);
     setIsCalculating(false); 
     setLatestCalculatedResults(null);
+    obtenerTipoCambioEurUsd(); // Actualizar tipo de cambio al cambiar de perfil
   };
 
   const toggleExpandItem = (key: string) => {

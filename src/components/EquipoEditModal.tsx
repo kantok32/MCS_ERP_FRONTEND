@@ -523,7 +523,7 @@ const EquipoEditModal: React.FC<EquipoEditModalProps> = ({ open, onClose, produc
       const fullKey = parentKey ? `${parentKey}.${key}` : key;
       if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         // Renderizar sección anidada
-        return (
+  return (
           <div key={fullKey} style={{ marginBottom: 16, padding: '10px 0', borderTop: '1px solid #eee' }}>
             <label style={{ ...labelStyle, fontWeight: 600 }}>{key.replace(/_/g, ' ').toUpperCase()}:</label>
             <div style={{ marginLeft: 12 }}>
@@ -574,7 +574,7 @@ const EquipoEditModal: React.FC<EquipoEditModalProps> = ({ open, onClose, produc
             Editar Producto: {formData.Codigo_Producto || formData.codigo_producto}
           </div>
           <button onClick={onClose} style={{ ...unifiedSecondaryButtonStyle, backgroundColor: 'transparent', color: 'white', border: 'none', fontSize: '18px' }}>×</button>
-        </div>
+            </div>
         <form onSubmit={handleSubmit} style={{display:'flex', flexDirection:'column', height:'100%'}}>
           <div style={unifiedBodyStyle}>
             <h4 style={improvedSectionTitleStyle}>Todos los Datos del Producto</h4>
