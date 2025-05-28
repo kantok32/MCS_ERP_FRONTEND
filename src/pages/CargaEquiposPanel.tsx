@@ -115,9 +115,6 @@ export default function CargaEquiposPanel() {
 
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Estado para mostrar recomendaciones según plantilla seleccionada
-  const [plantillaSeleccionada, setPlantillaSeleccionada] = useState<'equipos' | 'especificaciones' | null>(null);
-
   // Estado para resultado y error de carga
   const [uploadResult, setUploadResult] = useState<any>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -649,16 +646,16 @@ export default function CargaEquiposPanel() {
       <div style={sectionStyle}>
         <div>
           {/* Botones de descarga de plantilla arriba de las recomendaciones */}
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', justifyContent: 'flex-end' }}>
             <button
               style={{...buttonStyle, backgroundColor: '#3b82f6'}}
-              onClick={() => { handleDownloadEquiposTemplate(); setPlantillaSeleccionada('equipos'); }}
+              onClick={() => { handleDownloadEquiposTemplate(); }}
             >
               <Download size={16} /> Descargar Plantilla Equipos
             </button>
             <button
               style={{...buttonStyle, backgroundColor: '#10b981'}}
-              onClick={() => { handleDownloadSpecificationsTemplate(); setPlantillaSeleccionada('especificaciones'); }}
+              onClick={() => { handleDownloadSpecificationsTemplate(); }}
             >
               <Download size={16} /> Descargar Plantilla Especificaciones
             </button>
@@ -667,44 +664,6 @@ export default function CargaEquiposPanel() {
             <p>
               Utilice esta sección para cargar nuevos equipos o actualizar las especificaciones técnicas de equipos existentes mediante la plantilla correspondiente. Descargue la plantilla, complete los datos siguiendo las instrucciones y suba el archivo.
             </p>
-            {plantillaSeleccionada === null && (
-              <p style={{ color: '#64748b', fontSize: '14px' }}>Seleccione una plantilla para ver las recomendaciones específicas.</p>
-            )}
-            {plantillaSeleccionada === 'equipos' && (
-              <>
-                <b>Recomendaciones para Plantilla de Equipos:</b>
-                <ul style={{marginTop: '8px', lineHeight: '1.5'}}>
-                  <li>El archivo debe ser <b>.xlsx, .xls o .csv</b> y no superar los <b>10MB</b>.</li>
-                  <li>La <b>primera fila</b> debe contener los nombres de los campos (ejemplo: código_producto, nombre_producto, modelo, etc.).</li>
-                  <li>Cada fila a partir de la segunda representa un equipo nuevo.</li>
-                  <li>Complete todos los campos obligatorios para cada equipo.</li>
-                  <li>Las fechas deben estar en formato <b>YYYY-MM-DD</b>.</li>
-                  <li>Los números decimales deben usar <b>punto</b> como separador (ejemplo: 12.5).</li>
-                  <li>Las dimensiones deben ser <b>números enteros</b> (sin decimales).</li>
-                  <li>Los <b>códigos de producto</b> deben ser únicos y no repetirse.</li>
-                  <li>Revise que el archivo no esté protegido ni tenga hojas ocultas.</li>
-                  <li>Si ocurre un error, revise el mensaje detallado y corrija el archivo antes de volver a intentar.</li>
-                </ul>
-              </>
-            )}
-            {plantillaSeleccionada === 'especificaciones' && (
-              <>
-                <b>Recomendaciones para Plantilla de Especificaciones Técnicas:</b>
-                <ul style={{marginTop: '8px', lineHeight: '1.5'}}>
-                  <li>El archivo debe ser <b>.xlsx, .xls o .csv</b> y no superar los <b>10MB</b>.</li>
-                  <li>La <b>primera fila</b> debe contener los <b>códigos de producto</b> (uno por columna, a partir de la columna B).</li>
-                  <li>La <b>primera columna</b> debe contener los <b>nombres de las especificaciones técnicas</b> (una por fila, a partir de la fila 2).</li>
-                  <li>Las celdas deben contener los valores de cada especificación para cada producto.</li>
-                  <li>Deje las celdas vacías si no tiene información para una especificación (no use 'N/A', 'null' ni guiones).</li>
-                  <li>Las fechas deben estar en formato <b>YYYY-MM-DD</b>.</li>
-                  <li>Los números decimales deben usar <b>punto</b> como separador (ejemplo: 12.5).</li>
-                  <li>Las dimensiones deben ser <b>números enteros</b> (sin decimales).</li>
-                  <li>Los <b>códigos de producto</b> deben existir previamente en el sistema.</li>
-                  <li>Revise que el archivo no esté protegido ni tenga hojas ocultas.</li>
-                  <li>Si ocurre un error, revise el mensaje detallado y corrija el archivo antes de volver a intentar.</li>
-                </ul>
-              </>
-            )}
           </div>
 
           {/* Zona de Carga */}
@@ -744,7 +703,7 @@ export default function CargaEquiposPanel() {
             </p>
             <UploadCloud size={38} style={{ marginBottom: '12px', color: '#94a3b8' }} />
             <p style={{...descriptionStyle, marginBottom: '18px'}}>
-              {selectedFile ? `Archivo seleccionado: ${selectedFile.name}` : 'Arrastre aquí su archivo o haga clic para seleccionarlo.'}
+              {selectedFile ? `Archivo seleccionado: ${selectedFile.name}` : ''}
               <br />
               Formatos soportados: .xlsx, .xls, .csv
             </p>
@@ -804,31 +763,34 @@ export default function CargaEquiposPanel() {
             </div>
           )}
 
-          <div style={{fontSize: '13px', color: '#64748b'}}>
+          <div style={{fontSize: '13px', color: '#64748b', marginTop: '20px'}}>
             <strong>Notas importantes:</strong>
-            <ul style={{marginTop: '8px', lineHeight: '1.5'}}>
-              <li>Los archivos no deben exceder 10MB</li>
-              <li>Todas las fechas deben estar en formato YYYY-MM-DD</li>
-              <li>Los números decimales deben usar punto como separador</li>
-              <li>Los campos vacíos deben dejarse en blanco, no usar 'N/A' o "null"</li>
-              <li>Las dimensiones deben ser números enteros</li>
-              <li>Los códigos de producto deben ser únicos (para plantilla general) o existentes (para plantilla de especificaciones).</li>
-            </ul>
+            <div style={{marginTop: '8px'}}>
+              <h4 style={{fontSize: '14px', fontWeight: 600, marginBottom: '4px', color: '#475569'}}>Para Carga de Nuevos Equipos (Plantilla General):</h4>
+              <ul style={{marginLeft: '20px', lineHeight: '1.5'}}>
+                <li>Los datos deben estar en general (estructura de tabla plana).</li>
+                <li>Las dimensiones (largo, ancho, alto) e ingreso de diámetros están en milímetros (mm).</li>
+                <li>Para múltiples asignaciones en el campo "asignacion", separe cada código/modelo con el símbolo "/".</li>
+                <li>La comparación de texto (mayúsculas/minúsculas) no afecta la carga.</li>
+                <li>Los códigos de producto deben ser únicos.</li>
+                <li>Los archivos no deben exceder 10MB.</li>
+                <li>Todas las fechas deben estar en formato YYYY-MM-DD.</li>
+                <li>Los números decimales deben usar punto como separador.</li>
+                <li>Los campos vacíos deben dejarse en blanco, no usar 'N/A' o "null".</li>
+                <li>Las dimensiones deben ser números enteros.</li>
+              </ul>
+            </div>
+            <div style={{marginTop: '16px'}}>
+              <h4 style={{fontSize: '14px', fontWeight: 600, marginBottom: '4px', color: '#475569'}}>Para Actualizar Especificaciones (Formato Matricial):</h4>
+              <ul style={{marginLeft: '20px', lineHeight: '1.5'}}>
+                <li>Los códigos de producto listados deben existir previamente en el sistema.</li>
+                <li>Los archivos no deben exceder 10MB.</li>
+                <li>Los números decimales para valores de especificación deben usar punto como separador.</li>
+                <li>Los campos vacíos (celdas) se considerarán datos nulos o inexistentes para esa especificación y producto.</li>
+              </ul>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Botón Agregar Equipo Individual al final de la página */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '32px' }}>
-        <motion.button 
-          style={buttonStyle} 
-          onClick={() => setShowModal(true)}
-          whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Plus size={16} />
-          Agregar Equipo Individual
-        </motion.button>
       </div>
 
       {/* Modal para carga individual */}
@@ -975,31 +937,32 @@ export default function CargaEquiposPanel() {
                     />
                     {errors[`spec_${spec.id}_valor`] && <span style={errorStyle}>{errors[`spec_${spec.id}_valor`]}</span>}
                   </div>
-                  <button type="button" onClick={() => removeSpecItem(spec.id)} style={{...buttonStyle, padding: '8px'}} aria-label="Eliminar especificación">
-                    <X size={16} />
-                  </button>
+                  <div style={{...inputContainerStyle, width: '20px', justifyContent: 'center'}}>
+                    <button
+                      type="button"
+                      onClick={() => removeSpecItem(spec.id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '0',
+                        margin: '0',
+                      }}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
                 </div>
               ))}
-              <button type="button" onClick={addSpecItem} style={{...buttonStyle, marginTop: '10px'}}>
-                <Plus size={16} /> Añadir Especificación
-              </button>
             </section>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
-              <button type="button" 
-                style={{...buttonStyle, backgroundColor: '#94a3b8', marginRight: '12px'}} 
-                onClick={() => setShowModal(false)}
-              >
-                Cancelar
-              </button>
-              <button type="submit" style={buttonStyle}>
-                <Plus size={16} />
-                Agregar Equipo
-              </button>
-            </div>
+            <button type="button" style={buttonStyle} onClick={addSpecItem}>
+              <Plus size={16} />
+              Agregar Especificación
+            </button>
           </form>
         </div>
       </div>
     </div>
   );
-} 
+}
