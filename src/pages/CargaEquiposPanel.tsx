@@ -338,8 +338,8 @@ export default function CargaEquiposPanel() {
 
   // Función para descargar la plantilla de especificaciones (Excel)
   const handleDownloadSpecificationsTemplate = () => {
-    // Descarga el archivo directamente desde el directorio public del frontend
-    window.location.href = '/Plantilla_Carga_Especificaciones.xlsx'; // Asegúrate de que este archivo exista en tu directorio public
+    // Llama al endpoint del backend para descargar la plantilla de especificaciones
+    window.location.href = `${BACKEND_URL}/api/products/download-specifications-template`;
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
