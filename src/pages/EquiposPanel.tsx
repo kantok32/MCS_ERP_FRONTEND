@@ -3,10 +3,7 @@ import { Search, X, Check, FileEdit, Trash2, RefreshCw, ListFilter, Mail, Info, 
 import DetallesCargaPanel from './DetallesCargaPanel';
 import { motion } from 'framer-motion';
 import EquipoEditModal from '../components/EquipoEditModal';
-import ConfiguracionOpcionalesPanel from './ConfiguracionOpcionalesPanel';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Button, Box, Paper, Typography } from '@mui/material';
-import { ArrowRight } from 'lucide-react';
 
 const BACKEND_URL = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app';
 
@@ -240,7 +237,7 @@ const normalizeModeloString = (str: string) => { // <<< CORRECCIÓN DE TIPADO
   return str.toLowerCase().replace(/[\s-]+/g, ''); // Convierte a minúsculas y quita espacios y guiones
 };
 
-function getTipoChipeadora(nombreProducto) {
+function getTipoChipeadora(nombreProducto: string | undefined): string | null {
   if (!nombreProducto) return null;
   if (nombreProducto.toUpperCase().includes('PTO')) return 'Chipeadora PTO';
   if (nombreProducto.toUpperCase().includes('MOTOR')) return 'Chipeadora Motor';
@@ -380,35 +377,28 @@ export default function EquiposPanel() {
     setProductoParaVistaOpcionales(producto);
     setShowVistaOpcionalesModal(true);
 
-    // <<< INICIO DEBUG >>>
-    console.log("handleOpcionales: Producto:", producto); // <-- Añadido para depuración
-    // <<< FIN DEBUG >>>
+    console.log("handleOpcionales: Producto:", producto);
 
     try {
       const params = new URLSearchParams();
       params.append('codigo', producto.codigo_producto);
-      // Buscar modelo de forma flexible: primero en modelo (minúscula), luego en caracteristicas.modelo, luego en Modelo (capitalizado)
-      const modeloParaBuscar = producto.modelo || producto.caracteristicas?.modelo || producto.Modelo;
-      // Obtener categoría
+      
+      // Obtener modelo y categoría del producto actual
+      const modeloParaBuscar = producto.modelo || producto.Modelo || producto.caracteristicas?.modelo;
       const categoriaParaBuscar = producto.categoria;
 
-      // <<< INICIO DEBUG 2 >>>
-      console.log("handleOpcionales: modeloParaBuscar ('" + modeloParaBuscar + "'), Tipo: " + typeof modeloParaBuscar); // <-- Añadido
-      console.log("handleOpcionales: categoriaParaBuscar ('" + categoriaParaBuscar + "'), Tipo: " + typeof categoriaParaBuscar); // <-- Añadido
-      // <<< FIN DEBUG 2 >>>
+      console.log("handleOpcionales: modeloParaBuscar ('" + modeloParaBuscar + "'), Tipo: " + typeof modeloParaBuscar);
+      console.log("handleOpcionales: categoriaParaBuscar ('" + categoriaParaBuscar + "'), Tipo: " + typeof categoriaParaBuscar);
 
-      // Validar que tenemos un modelo válido y la categoría
-      if (!modeloParaBuscar || typeof modeloParaBuscar !== 'string' || modeloParaBuscar.trim() === '' || modeloParaBuscar.trim() === '-' || !categoriaParaBuscar || typeof categoriaParaBuscar !== 'string' || categoriaParaBuscar.trim() === '') {
-          throw new Error('Faltan parámetros requeridos (modelo o categoría) del producto principal para buscar opcionales.');
+      if (!modeloParaBuscar || !categoriaParaBuscar) {
+        throw new Error('Faltan parámetros requeridos (modelo o categoría) del producto principal para buscar opcionales.');
       }
 
-      // Extraer solo la parte del modelo antes del primer espacio, si existe
       const baseModelo = modeloParaBuscar.split(' ')[0];
-
       params.append('modelo', baseModelo);
       params.append('categoria', categoriaParaBuscar);
 
-      const response = await fetch(`https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/opcionales?codigo=${producto.codigo_producto}&modelo=${baseModelo}&categoria=${categoriaParaBuscar}`);
+      const response = await fetch(`${BACKEND_URL}/api/products/opcionales?${params.toString()}`);
       const data: OpcionalesResponse = await response.json();
 
       if (!response.ok || !data.success) { 
@@ -416,7 +406,95 @@ export default function EquiposPanel() {
       }
       
       const opcionales = data.data?.products || data.products || []; 
-      setVistaOpcionalesData(opcionales);
+      console.log("Opcionales recibidos del backend:", opcionales);
+      
+      // --- Convertir campos de texto relevantes a minúsculas --- 
+      const opcionalesMinusculas = opcionales.map(opcional => {
+        const processedOpcional = { ...opcional };
+        // Lista de campos a convertir (puedes añadir o quitar según sea necesario)
+        const fieldsToLowercase = [
+          'codigo_producto',
+          'nombre_del_producto',
+          'descripcion',
+          'Modelo',
+          'categoria',
+          'tipo',
+          'producto', // Campo usado en filtro de chipeadoras
+          'proveedor',
+          'procedencia',
+          'familia',
+          'nombre_comercial',
+        ];
+    
+        fieldsToLowercase.forEach(field => {
+          if (typeof processedOpcional[field] === 'string') {
+            processedOpcional[field] = processedOpcional[field].toLowerCase();
+          }
+        });
+    
+        // Convertir campos anidados relevantes (ej. caracteristicas)
+        if (processedOpcional.caracteristicas && typeof processedOpcional.caracteristicas === 'object' && processedOpcional.caracteristicas !== null) {
+            const nestedFieldsToLowercase = ['nombre_del_producto', 'modelo', 'descripcion', 'categoria'];
+            nestedFieldsToLowercase.forEach(nestedField => {
+                if (processedOpcional.caracteristicas && typeof processedOpcional.caracteristicas[nestedField] === 'string') {
+                    processedOpcional.caracteristicas[nestedField] = processedOpcional.caracteristicas[nestedField].toLowerCase();
+                }
+            });
+        }
+    
+        // No es necesario convertir especificaciones_tecnicas aquí a menos que se usen en filtros directos por sus valores/nombres
+    
+        return processedOpcional;
+      });
+      console.log("Opcionales convertidos a minúsculas:", opcionalesMinusculas);
+      // --- Fin Conversión --- 
+      
+      // Filtrar opcionales basado en el nuevo formato de asignado_a_codigo_principal
+      const opcionalesFiltrados = opcionalesMinusculas.filter(opcional => {
+        // Verificar si el opcional tiene asignado_a_codigo_principal y es un array
+        if (!opcional.asignado_a_codigo_principal || !Array.isArray(opcional.asignado_a_codigo_principal)) {
+          return false;
+        }
+        
+        // Usar el modelo base que ya obtuvimos anteriormente
+        const modeloBase = baseModelo.toLowerCase();
+        console.log("Modelo base del principal:", modeloBase);
+        console.log("Array de asignación:", opcional.asignado_a_codigo_principal);
+        
+        // Verificar si el código del producto principal está en el array de asignación
+        const asignado = opcional.asignado_a_codigo_principal.some(codigo => {
+          const codigoNormalizado = String(codigo).toLowerCase();
+          const coincide = codigoNormalizado === modeloBase;
+          console.log(`Comparando "${codigoNormalizado}" con "${modeloBase}": ${coincide}`);
+          return coincide;
+        });
+        
+        if (!asignado) return false;
+        
+        // Solo aplicar el filtro de tipo de chipeadora si el producto principal es una chipeadora
+        const nombrePrincipal = producto.nombre_del_producto?.toUpperCase() || '';
+        if (nombrePrincipal.includes('CHIPEADORA')) {
+          const tipoChipeadora = getTipoChipeadora(producto.nombre_del_producto);
+          
+          console.log('[Chipeadora Filter] Nombre principal:', nombrePrincipal); // Log
+          console.log('[Chipeadora Filter] Tipo de chipeadora determinado (getTipoChipeadora):', tipoChipeadora); // Log
+          console.log('[Chipeadora Filter] Opcional.producto:', opcional.producto); // Log
+
+          if (!tipoChipeadora) {
+            console.log('[Chipeadora Filter] getTipoChipeadora devolvió null/undefined. Filtrando opcional.'); // Log
+            return false;
+          }
+          // Modificar la comparación para usar includes en lugar de ===
+          const coincideTipoChipeadora = tipoChipeadora.toLowerCase().includes(opcional.producto?.toLowerCase() || ''); // Añadir fallback para opcional.producto
+          console.log('[Chipeadora Filter] ¿Coincide tipo chipeadora?: ', coincideTipoChipeadora); // Log
+          return coincideTipoChipeadora;
+        }
+        
+        return true; // Para otros productos, solo el filtro de asignación
+      });
+      
+      console.log("Opcionales filtrados:", opcionalesFiltrados);
+      setVistaOpcionalesData(opcionalesFiltrados);
 
     } catch (error: any) {
       console.error('Error al obtener opcionales para vista rápida:', error);
@@ -1357,30 +1435,7 @@ export default function EquiposPanel() {
                     </thead>
                     <tbody>
                       {vistaOpcionalesData
-                        .filter(opcional => {
-                          if (!opcional.asignado_a_codigo_principal || !productoParaVistaOpcionales?.modelo) {
-                            return false;
-                          }
-                          // Obtener modelo base del principal
-                          const modeloPrincipalBase = String(productoParaVistaOpcionales.modelo).split(' ')[0].trim().toLowerCase();
-                          // Obtener todas las asignaciones posibles del opcional
-                          const asignaciones = String(opcional.asignado_a_codigo_principal)
-                            .split('/')
-                            .map(s => s.trim().toLowerCase());
-                          // Primer filtro: asignación por modelo base
-                          const asignado = asignaciones.includes(modeloPrincipalBase);
-                          if (!asignado) return false;
-                          // Solo aplicar el filtro de tipo de chipeadora si el producto principal es una chipeadora
-                          const nombrePrincipal = productoParaVistaOpcionales.nombre_del_producto?.toUpperCase() || '';
-                          if (nombrePrincipal.includes('CHIPEADORA')) {
-                            const tipoChipeadora = getTipoChipeadora(productoParaVistaOpcionales.nombre_del_producto);
-                            if (!tipoChipeadora) return false;
-                            return (opcional.producto === tipoChipeadora);
-                          }
-                          // Para otros productos, solo el filtro de asignación
-                          return true;
-                        })
-                        .map((opcional, index) => (
+                        .map((opcional, index) => ( // <-- .map() debe seguir directamente a vistaOpcionalesData
                           <tr key={opcional.codigo_producto || `opc-${index}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
                             <td style={unifiedTdStyle}>{opcional.codigo_producto || '-'}</td>
                             {/* Ajuste para tomar nombre_del_producto de caracteristicas primero */}

@@ -155,7 +155,7 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
     const profileNameFromCalc = detalle.profileName;
     const currentProfileName = profile?.nombre_perfil;
     const displayProfileName = currentProfileName || profileNameFromCalc || "Perfil Desconocido";
-    const displayProfileId = profile?._id || "ID Desconocido";
+    const displayProfileId = profile?._id || "ID Desconocido"; 
     const inputs = detalle.inputs;
     const calculados = detalle.calculados;
     if (!inputs || !calculados) {
@@ -261,7 +261,7 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
 const fetchCalculoDetallado = async (
   producto: Producto,
   _costoFabricaOriginalEUR: number,
-  _fechaCotizacionStr: string | undefined,
+  _fechaCotizacionStr: string | Date | undefined,
   profileId: string,
   anoEnCurso: number,
   tcEurUsd: number,
@@ -299,7 +299,7 @@ const fetchCalculoDetallado = async (
     if (dateObj instanceof Date && !isNaN(dateObj.valueOf()) && !isNaN(dateObj.getFullYear())) {
       parsedYear = dateObj.getFullYear();
     } else {
-      console.warn(`[fetchCalculoDetallado] fechaCotizacionStr "${fechaCotizacionStr}" no pudo ser parseada a una fecha válida.`);
+        console.warn(`[fetchCalculoDetallado] fechaCotizacionStr "${fechaCotizacionStr}" no pudo ser parseada a una fecha válida.`);
     }
   }
   const anoCotizacion = parsedYear !== undefined ? parsedYear : anoEnCurso - 1;
@@ -313,7 +313,7 @@ const fetchCalculoDetallado = async (
 
   const payload = {
     profileId: profileId,
-    anoCotizacion: anoCotizacion,
+    anoCotizacion: anoCotizacion, 
     anoEnCurso: anoEnCurso,
     costoFabricaOriginalEUR: costoFabricaOriginalEUR,
     tipoCambioEurUsdActual: tcEurUsd, // Usar el tipo de cambio obtenido de la API
@@ -548,7 +548,7 @@ export default function ResultadosCalculoCostosPanel() {
   const realizarCalculoDetallado = async (lineas: LineaDeTrabajoConCosto[]): Promise<LineaDeTrabajoConCosto[] | null> => {
     if (!currentProfileData) {
       setErrorCarga("No hay un perfil de costo seleccionado.");
-      return null;
+        return null; 
     }
 
     if (!tipoCambioEurUsd) {
@@ -563,13 +563,13 @@ export default function ResultadosCalculoCostosPanel() {
           const detalleCalculoPrincipal = await fetchCalculoDetallado(
             linea.principal,
             linea.principal.datos_contables?.costo_fabrica || 0,
-            linea.principal.datos_contables?.fecha_cotizacion,
+            linea.principal.datos_contables?.fecha_cotizacion as string | Date | undefined,
             currentProfileData._id,
             anoActualGlobal,
             tipoCambioEurUsd,
             currentProfileData.nombre_perfil,
             perfilesList
-          );
+        );
 
           // Calcular para los opcionales
           const detallesCalculoOpcionales = await Promise.all(
@@ -577,17 +577,17 @@ export default function ResultadosCalculoCostosPanel() {
               fetchCalculoDetallado(
                 opcional,
                 opcional.datos_contables?.costo_fabrica || 0,
-                opcional.datos_contables?.fecha_cotizacion,
+                opcional.datos_contables?.fecha_cotizacion as string | Date | undefined,
                 currentProfileData._id,
                 anoActualGlobal,
                 tipoCambioEurUsd,
                 currentProfileData.nombre_perfil,
                 perfilesList
               )
-            )
-          );
+              )
+            );
 
-          return {
+        return {
             ...linea,
             detalleCalculoPrincipal,
             detallesCalculoOpcionales,
@@ -600,12 +600,12 @@ export default function ResultadosCalculoCostosPanel() {
       })
     );
 
-    // Filtrar las líneas que fallaron
-    const lineasValidas = nuevasLineas.filter((linea): linea is LineaDeTrabajoConCosto => linea !== null);
+    // Filtrar las líneas que fallaron (que son null si el cálculo de esa línea falló)
+    const lineasValidas = nuevasLineas.filter((linea): linea is LineaDeTrabajoConCosto => linea !== null) as LineaDeTrabajoConCosto[];
 
     if (lineasValidas.length === 0) {
       setErrorCarga("No se pudo calcular ninguna línea. Por favor, verifique los datos e intente nuevamente.");
-      return null;
+      return null; 
     }
 
     return lineasValidas;
@@ -745,17 +745,17 @@ export default function ResultadosCalculoCostosPanel() {
     }
     // Navegar a la página de configuración de datos de empresa/cotización
     navigate('/configuracion-panel', {
-      state: {
+        state: {
         itemsParaCotizar: lineasCalculadas.map(linea => ({
           principal: linea.principal,
           opcionales: linea.opcionales
         })),
-        resultadosCalculados: latestCalculatedResults,
-        selectedProfileId: currentProfileData._id,
-        nombrePerfil: currentProfileData.nombre_perfil,
-        anoEnCursoGlobal: anoActualGlobal,
+            resultadosCalculados: latestCalculatedResults,
+            selectedProfileId: currentProfileData._id,
+            nombrePerfil: currentProfileData.nombre_perfil,
+            anoEnCursoGlobal: anoActualGlobal,
         historialId: savedCalculoId,
-      }
+        }
     });
   };
 

@@ -354,42 +354,76 @@ export default function CargaEquiposPanel() {
   };
 
   // Función para carga de equipos (formato tabla)
-  const handleUploadEquipos = async (file: File) => {
-    try {
+  const handleUploadEquipos = async (file: File): Promise<any> => {
+    setUploadStatus({ type: 'uploading', message: 'Cargando y procesando plantilla general...' });
+    setUploadResult(null);
+    setUploadError(null);
+
     const formData = new FormData();
-      formData.append('archivoExcelPlain', file);
+    formData.append('archivoExcelPlain', file);
+
+    try {
       const response = await fetch(`${BACKEND_URL}/api/products/upload-plain`, {
         method: 'POST',
         body: formData,
       });
+
+      const result = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Error al cargar el archivo');
+        const errorMessage = result.message || `Error ${response.status}: ${response.statusText}`;
+        console.error('Error en carga masiva (Plantilla General):', result);
+        setUploadStatus({ type: 'error', message: errorMessage, summary: result.summary });
+        setUploadError(errorMessage);
+        return null;
+      } else {
+        console.log('Carga masiva exitosa (Plantilla General):', result);
+        setUploadStatus({ type: 'success', message: 'Carga masiva completada.', summary: result.summary });
+        setUploadResult(result);
+        return result;
       }
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+      console.error('Error en carga masiva (fetch Plantilla General):', error);
+      setUploadStatus({ type: 'error', message: `Error al enviar datos: ${error.message}`, summary: null });
+      setUploadError(error.message);
+      return null;
     }
   };
 
   // Función para carga de especificaciones (formato matricial)
-  const handleUploadSpecs = async (file: File) => {
+  const handleUploadSpecs = async (file: File): Promise<any> => {
+    setUploadStatus({ type: 'uploading', message: 'Cargando y procesando formato matricial...' });
+    setUploadResult(null);
+    setUploadError(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
     try {
-      const formData = new FormData();
-      formData.append('file', file);
       const response = await fetch(`${BACKEND_URL}/api/products/upload-specifications`, {
         method: 'POST',
         body: formData,
       });
+
+      const result = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Error al cargar el archivo');
+        const errorMessage = result.message || `Error ${response.status}: ${response.statusText}`;
+        console.error('Error en carga masiva (Formato Matricial):', result);
+        setUploadStatus({ type: 'error', message: errorMessage, summary: result.summary });
+        setUploadError(errorMessage);
+        return null;
+      } else {
+        console.log('Carga masiva exitosa (Formato Matricial):', result);
+        setUploadStatus({ type: 'success', message: 'Carga masiva completada.', summary: result.summary });
+        setUploadResult(result);
+        return result;
       }
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+      console.error('Error en carga masiva (fetch Formato Matricial):', error);
+      setUploadStatus({ type: 'error', message: `Error al enviar datos: ${error.message}`, summary: null });
+      setUploadError(error.message);
+      return null;
     }
   };
 
@@ -423,12 +457,9 @@ export default function CargaEquiposPanel() {
     } else {
         throw new Error('Tipo de carga no reconocido.');
       }
-      setUploadStatus({ type: 'success', message: data.message || 'Archivo procesado correctamente.', summary: data.summary });
-      setUploadResult(data);
       setSelectedFile(null);
     } catch (error: any) {
-      setUploadStatus({ type: 'error', message: error.message || 'Error desconocido' });
-      setUploadError(error.message || 'Error desconocido');
+      setSelectedFile(null);
     }
   };
 
@@ -619,13 +650,13 @@ export default function CargaEquiposPanel() {
         <div>
           {/* Botones de descarga de plantilla arriba de las recomendaciones */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-            <button 
+            <button
               style={{...buttonStyle, backgroundColor: '#3b82f6'}}
               onClick={() => { handleDownloadEquiposTemplate(); setPlantillaSeleccionada('equipos'); }}
             >
               <Download size={16} /> Descargar Plantilla Equipos
             </button>
-            <button 
+            <button
               style={{...buttonStyle, backgroundColor: '#10b981'}}
               onClick={() => { handleDownloadSpecificationsTemplate(); setPlantillaSeleccionada('especificaciones'); }}
             >
@@ -681,24 +712,24 @@ export default function CargaEquiposPanel() {
             <h4 style={{ marginTop: 0, marginBottom: '10px', fontWeight: 600, fontSize: '15px' }}>1. Seleccione el tipo de carga:</h4>
             <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding:'8px', borderRadius:'4px', backgroundColor: uploadType === 'plain' ? '#e0f2fe' : 'transparent'}}>
-                <input 
-                  type="radio" 
-                  name="uploadType" 
-                  value="plain" 
+                <input
+                  type="radio"
+                  name="uploadType"
+                  value="plain"
                   checked={uploadType === 'plain'}
-                  onChange={() => setUploadType('plain')} 
+                  onChange={() => setUploadType('plain')}
                   style={{ marginRight: '8px' }}
                 />
                 <FileSpreadsheet size={18} style={{marginRight: '5px'}}/>
                 Cargar Nuevos Equipos (Plantilla General)
               </label>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding:'8px', borderRadius:'4px', backgroundColor: uploadType === 'matrix' ? '#e0f2fe' : 'transparent' }}>
-                <input 
-                  type="radio" 
-                  name="uploadType" 
-                  value="matrix" 
+                <input
+                  type="radio"
+                  name="uploadType"
+                  value="matrix"
                   checked={uploadType === 'matrix'}
-                  onChange={() => setUploadType('matrix')} 
+                  onChange={() => setUploadType('matrix')}
                   style={{ marginRight: '8px' }}
                 />
                 <Table2 size={18} style={{marginRight: '5px'}}/>
@@ -706,7 +737,7 @@ export default function CargaEquiposPanel() {
               </label>
             </div>
              <p style={{fontSize: '12px', color: '#64748b', marginTop: '10px'}}>
-              {uploadType === 'plain' 
+              {uploadType === 'plain'
                 ? "Use la 'Plantilla General (XLSX)' para crear nuevos equipos o actualizar su información básica (nombre, modelo, dimensiones, etc.)."
                 : "Use la 'Plantilla Especificaciones (CSV)' para actualizar únicamente las especificaciones técnicas de equipos existentes mediante un formato matricial (Código Producto vs Nombre Especificación)."
               }
@@ -718,20 +749,20 @@ export default function CargaEquiposPanel() {
               Formatos soportados: .xlsx, .xls, .csv
             </p>
             {/* Input de archivo oculto y botón visible */}
-            <input 
-              type="file" 
-              id="bulk-upload-input" 
-              style={{ display: 'none' }} 
-              accept=".xlsx, .xls, .csv" 
-              onChange={handleFileChange} 
+            <input
+              type="file"
+              id="bulk-upload-input"
+              style={{ display: 'none' }}
+              accept=".xlsx, .xls, .csv"
+              onChange={handleFileChange}
             />
             <label htmlFor="bulk-upload-input" style={{...buttonStyle, cursor: 'pointer', backgroundColor: '#64748b', marginRight: '12px'}}>
               <FileText size={16} />
               Seleccionar Archivo
             </label>
-            <button 
-              style={selectedFile && uploadStatus.type !== 'uploading' ? buttonStyle : disabledButtonStyle} 
-              onClick={handleBulkUpload} 
+            <button
+              style={selectedFile && uploadStatus.type !== 'uploading' ? buttonStyle : disabledButtonStyle}
+              onClick={handleBulkUpload}
               disabled={!selectedFile || uploadStatus.type === 'uploading'}
             >
               {uploadStatus.type === 'uploading' ? 'Cargando...' : 'Cargar Archivo'}
@@ -752,7 +783,7 @@ export default function CargaEquiposPanel() {
               <AlertCircle size={16} /> {uploadStatus.message}
             </div>
           )}
-          
+
           {/* Mostrar resultado o error de la carga masiva */}
           {uploadResult && (
             <div className="result" style={{ marginTop: '20px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '16px' }}>
@@ -921,7 +952,7 @@ export default function CargaEquiposPanel() {
 
             {/* Sección: Especificaciones Técnicas Dinámicas */}
             <section>
-              <h3 style={{...subtitleStyle, fontSize: '16px'}}>Especificaciones Técnicas</h3>
+              <h3 style={{...subtitleStyle, fontSize: '16px'}}>Especificaciones Técnicas Dinámicas</h3>
               {specItems.map((spec, index) => (
                 <div key={spec.id} style={specRowStyle}>
                   <div style={{...inputContainerStyle, flexGrow: 1}}>

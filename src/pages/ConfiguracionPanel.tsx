@@ -2,13 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Button, CircularProgress, Container, TextField, Typography, Paper, Grid, Divider, TextareaAutosize } from '@mui/material';
 import { ArrowLeft, DownloadCloud } from 'lucide-react';
+import { Producto } from '../types/product'; // Importar la interfaz Producto
 
 // Tipos (Idealmente, algunos de estos vendrían de un archivo global de tipos)
-interface Producto {
-  codigo_producto?: string;
-  nombre_del_producto?: string;
-  // ... otros campos de Producto que puedan ser relevantes para mostrar
-}
 interface ProductoConOpcionales { principal: Producto; opcionales: Producto[]; }
 interface CalculationResult { inputs?: any; calculados?: any; error?: string; }
 interface LocationStateFromPrevPage {
@@ -83,7 +79,7 @@ export default function ConfiguracionPanel() {
       return;
     }
     // Helper para formatear CLP
-    function formatCLP(value) {
+    function formatCLP(value: number | null | undefined) {
       if (typeof value !== 'number' || isNaN(value)) return '-';
       return '$' + value.toLocaleString('es-CL', { minimumFractionDigits: 0 });
     }
@@ -158,7 +154,9 @@ export default function ConfiguracionPanel() {
                       const keyOpc = `opcional-${opc.codigo_producto || opIdx}`;
                       const opcCalc = calculosData.resultadosCalculados?.[keyOpc];
                       const precioOpc = opcCalc?.calculados?.precios_cliente?.precioVentaTotalClienteCLP;
-                      return `<tr class='opcional-row'><td>${opc.nombre_del_producto || 'Opcional sin nombre'}</td><td class='precio'>${formatCLP(precioOpc)}</td></tr>`;
+                      return `
+                        <tr class='opcional-row'><td>${opc.nombre_del_producto || 'Opcional sin nombre'}</td><td class='precio'>${formatCLP(precioOpc)}</td></tr>
+                      `;
                     }).join('');
                   }
                   return `
