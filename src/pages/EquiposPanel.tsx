@@ -92,7 +92,7 @@ interface Producto {
   codigo_producto?: string;
   nombre_del_producto?: string;
   descripcion?: string;
-  Modelo?: string; // Usado en la tabla principal y modal de opcionales
+  modelo?: string; // Usado en la tabla principal y modal de opcionales
   categoria?: string; // Usado en la tabla principal
   tipo?: string; // Para "opcional" u otros tipos, usado en la tabla principal
   producto?: string; // <--- CAMPO CLAVE PARA OPCIONALES Y LINTER
@@ -616,7 +616,7 @@ export default function EquiposPanel() {
         producto => 
           producto.codigo_producto?.toLowerCase().includes(lowerSearchTerm) || 
           producto.nombre_del_producto?.toLowerCase().includes(lowerSearchTerm) ||
-          producto.Modelo?.toLowerCase().includes(lowerSearchTerm)
+          producto.modelo?.toLowerCase().includes(lowerSearchTerm)
       );
     }
 
@@ -630,7 +630,7 @@ export default function EquiposPanel() {
           if (columnKey === 'codigo_producto') valorColumna = producto.codigo_producto || '';
           else if (columnKey === 'nombre_del_producto') valorColumna = producto.nombre_del_producto || '';
           else if (columnKey === 'descripcion') valorColumna = producto.descripcion || '';
-          else if (columnKey === 'Modelo') valorColumna = producto.Modelo || '';
+          else if (columnKey === 'modelo') valorColumna = producto.modelo || '';
           else if (columnKey === 'tipo') {
             // Re-calcular displayTipo para este producto para poder filtrar sobre él
             const nombreProductoNormalizado = producto.nombre_del_producto?.toLowerCase() || '';
@@ -955,7 +955,7 @@ export default function EquiposPanel() {
   // PASO 0: Tabla de Equipos
   return (
     <div style={{padding: '24px' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '24px' }}>EQUIPOS</h1>
+      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '24px' }}>Equipos</h1>
     
       {/* Barra de búsqueda y filtros con los botones actualizados */}
 
@@ -1094,9 +1094,8 @@ export default function EquiposPanel() {
         {[ // Array de configuración para generar los filtros dinámicamente
           { label: 'Código:', name: 'codigo_producto', placeholder: 'Filtrar Código...' },
           { label: 'Nombre:', name: 'nombre_del_producto', placeholder: 'Filtrar Nombre...' },
-          { label: 'Descripción:', name: 'descripcion', placeholder: 'Filtrar Desc...' },
-          { label: 'Modelo:', name: 'Modelo', placeholder: 'Filtrar Modelo...' },
-          { label: 'Categoría:', name: 'tipo', placeholder: 'Filtrar Categoría...' }, // Nombre visual cambiado
+          { label: 'Modelo:', name: 'modelo', placeholder: 'Filtrar Modelo...' },
+          { label: 'Fabricante:', name: 'fabricante', placeholder: 'Filtrar Fabricante...' },
         ].map(filter => (
           <div key={filter.name} style={{ display: 'flex', flexDirection: 'column' }}>
             <label htmlFor={`filter-${filter.name}`} style={{ fontSize: '12px', color: '#374151', marginBottom: '4px' }}>
@@ -1134,11 +1133,12 @@ export default function EquiposPanel() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                  <thead>
                   <tr style={{ backgroundColor: '#f3f4f6', borderBottom: '1px solid #e5e7eb', fontWeight: 'bold', color: '#374151' }}>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', width: '120px' }}>Código</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left' }}>Nombre</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left' }}>Descripción</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', width: '150px' }}>Modelo</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'center', width: '100px' }}>Ver Detalle</th>
+                    <th style={{ padding: '16px', textAlign: 'left', width: '100px' }}>Código</th>
+                    <th style={{ padding: '16px', textAlign: 'left', width: '200px' }}>Nombre</th>
+                    <th style={{ padding: '16px', textAlign: 'left', width: '200px' }}>Descripción</th>
+                    <th style={{ padding: '16px', textAlign: 'left', width: '150px' }}>Modelo</th>
+                    <th style={{ padding: '16px', textAlign: 'left', width: '150px' }}>Fabricante</th>
+                    <th style={{ padding: '16px', textAlign: 'center', width: '100px' }}>Ver Detalle</th>
                     <th style={{ padding: '12px 16px', textAlign: 'center', width: '100px' }}>Opcionales</th>
                     {isSelectionModeActive && (
                       <th style={{ padding: '12px 16px', textAlign: 'center', width: '100px' }}>Seleccionar</th>
@@ -1194,13 +1194,25 @@ export default function EquiposPanel() {
                         {/* Column: Código */}
                         <td style={{ padding: '16px', textAlign: 'left' }}>{producto.codigo_producto || '-'}</td>
                         {/* Column: Nombre */}
-                        <td style={{ padding: '16px', textAlign: 'left' }}>{producto.nombre_del_producto || '-'}</td>
+                        <td style={{ padding: '16px', textAlign: 'left' }}>
+                          {producto.nombre_del_producto 
+                            ? producto.nombre_del_producto.charAt(0).toUpperCase() + producto.nombre_del_producto.slice(1)
+                            : '-'
+                          }
+                        </td>
                         {/* Column: Descripción */}
-                        <td style={{ padding: '16px', textAlign: 'left' }}>{producto.descripcion || '-'}</td>
+                        <td style={{ padding: '16px', textAlign: 'left' }}>
+                          {producto.descripcion
+                            ? producto.descripcion.charAt(0).toUpperCase() + producto.descripcion.slice(1)
+                            : '-'
+                          }
+                        </td>
                         {/* Column: Modelo */}
                         <td style={{ padding: '16px', textAlign: 'left' }}>{producto.modelo || '-'}</td>
+                        {/* Column: Fabricante */}
+                        <td style={{ padding: '16px', textAlign: 'left' }}>{producto.fabricante || '-'}</td>
                         {/* Column: Ver Detalle */}
-                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                        <td style={{ padding: '16px', textAlign: 'center' }}>
                           <button 
                             title="Ver Detalles" 
                             className="button-hover" 
@@ -1384,7 +1396,7 @@ export default function EquiposPanel() {
                     <Typography variant="body2"><strong>Fabricante:</strong> {detalleProducto.fabricante || 'No especificado'}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="body2"><strong>Modelo:</strong> {detalleProducto.Modelo || 'No especificado'}</Typography>
+                    <Typography variant="body2"><strong>Modelo:</strong> {detalleProducto.modelo || 'No especificado'}</Typography>
                   </Grid>
                 </Grid>
               </div>

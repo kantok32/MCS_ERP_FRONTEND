@@ -375,7 +375,7 @@ export default function CargaEquiposPanel() {
         setUploadStatus({ type: 'error', message: errorMessage, summary: result.summary });
         setUploadError(errorMessage);
         return null;
-      } else {
+    } else {
         console.log('Carga masiva exitosa (Plantilla General):', result);
         setUploadStatus({ type: 'success', message: 'Carga masiva completada.', summary: result.summary });
         setUploadResult(result);
@@ -951,20 +951,20 @@ export default function CargaEquiposPanel() {
                         margin: '0',
                       }}
                     >
-                      <X size={16} />
-                    </button>
+                    <X size={16} />
+                  </button>
                   </div>
                 </div>
               ))}
             </section>
 
             <button type="button" style={buttonStyle} onClick={addSpecItem}>
-              <Plus size={16} />
+                <Plus size={16} />
               Agregar Especificación
-            </button>
+              </button>
           </form>
         </div>
       </div>
     </div>
   );
-}
+} 
