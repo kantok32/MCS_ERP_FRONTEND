@@ -284,6 +284,10 @@ export default function EquiposPanel() {
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Estados para almacenar listas únicas para filtros de columna dropdown
+  const [uniqueModelos, setUniqueModelos] = useState<string[]>([]);
+  const [uniqueFabricantes, setUniqueFabricantes] = useState<string[]>([]);
+
   // --- Estilos Unificados (Basados en Ver Detalle) ---
   const unifiedModalOverlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1040 };
   const unifiedModalContentStyle: React.CSSProperties = { 
@@ -655,6 +659,19 @@ export default function EquiposPanel() {
     
     setProductos(productosVisiblesEnTabla); // Productos que realmente se muestran
     setTotalMostrado(productosVisiblesEnTabla.length); // Este es nuestro 'X'
+
+    // --- Extraer modelos y fabricantes únicos para los filtros dropdown ---
+    const modelos = new Set<string>();
+    const fabricantes = new Set<string>();
+    productosOriginales.forEach(p => {
+      if (p.modelo) modelos.add(p.modelo);
+      if (p.fabricante) fabricantes.add(p.fabricante);
+    });
+    // Convertir Sets a Arrays y ordenar alfabéticamente
+    setUniqueModelos(Array.from(modelos).sort());
+    setUniqueFabricantes(Array.from(fabricantes).sort());
+    // --- Fin Extracción ---
+
   }, [searchTerm, productosOriginales, columnFilters]);
 
   useEffect(() => {
@@ -811,7 +828,7 @@ export default function EquiposPanel() {
     }
   };
 
-  const handleColumnFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleColumnFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setColumnFilters(prev => ({
       ...prev,
@@ -1094,8 +1111,7 @@ export default function EquiposPanel() {
         {[ // Array de configuración para generar los filtros dinámicamente
           { label: 'Código:', name: 'codigo_producto', placeholder: 'Filtrar Código...' },
           { label: 'Nombre:', name: 'nombre_del_producto', placeholder: 'Filtrar Nombre...' },
-          { label: 'Modelo:', name: 'modelo', placeholder: 'Filtrar Modelo...' },
-          { label: 'Fabricante:', name: 'fabricante', placeholder: 'Filtrar Fabricante...' },
+          // REMOVED: Old text input filters for Modelo and Fabricante
         ].map(filter => (
           <div key={filter.name} style={{ display: 'flex', flexDirection: 'column' }}>
             <label htmlFor={`filter-${filter.name}`} style={{ fontSize: '12px', color: '#374151', marginBottom: '4px' }}>
@@ -1112,6 +1128,41 @@ export default function EquiposPanel() {
             />
           </div>
         ))}
+        {/* Renderizar filtros de Modelo y Fabricante como Selects */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <label htmlFor="filter-modelo" style={{ fontSize: '12px', color: '#374151', marginBottom: '4px' }}>
+            Modelo:
+          </label>
+          <select
+            id="filter-modelo"
+            name="modelo"
+            value={columnFilters.modelo || ''}
+            onChange={handleColumnFilterChange}
+            style={{ ...filterInputStyle, width: '150px', padding: '4px 6px' }} // Ajustar padding para select
+          >
+            <option value="">Filtrar Modelo...</option>
+            {uniqueModelos.map(modelo => (
+              <option key={modelo} value={modelo}>{modelo}</option>
+            ))}
+          </select>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <label htmlFor="filter-fabricante" style={{ fontSize: '12px', color: '#374151', marginBottom: '4px' }}>
+            Fabricante:
+          </label>
+          <select
+            id="filter-fabricante"
+            name="fabricante"
+            value={columnFilters.fabricante || ''}
+            onChange={handleColumnFilterChange}
+            style={{ ...filterInputStyle, width: '150px', padding: '4px 6px' }} // Ajustar padding para select
+          >
+            <option value="">Filtrar Fabricante...</option>
+            {uniqueFabricantes.map(fabricante => (
+              <option key={fabricante} value={fabricante}>{fabricante}</option>
+            ))}
+          </select>
+        </div>
       </div> 
 
       {/* Contador */}
