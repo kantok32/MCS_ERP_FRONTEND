@@ -164,3 +164,17 @@ export const getCalculoHistorialById = async (id: string): Promise<HistorialCalc
     throw error;
   }
 }; 
+
+// Función para eliminar un historial de cálculo por ID
+export const deleteCalculoHistorial = async (id: string): Promise<void> => {
+  try {
+    // Realiza la solicitud DELETE al endpoint del backend
+    const response = await apiClient.delete(`/calculo-historial/${id}`);
+    // Puedes loguear la respuesta o manejarla si es necesario, pero para una simple eliminación, solo necesitamos que la llamada sea exitosa
+    console.log('Historial de cálculo eliminado:', response.data);
+  } catch (error) {
+    console.error(`[calculoHistorialService] Error eliminando historial por ID (${id}) (vía apiClient):`, error);
+    // Lanza el error para que el componente llamador pueda manejarlo
+    throw error; 
+  }
+}; 
