@@ -307,7 +307,7 @@ const EquipoEditModal: React.FC<EquipoEditModalProps> = ({ open, onClose, produc
     } else {
       setFormData((prev: typeof formData) => ({
         ...prev,
-        [name]: type === 'checkbox' ? checked : value,
+        [name]: type === 'checkbox' ? checked : value
       }));
     }
   };

@@ -16,6 +16,7 @@ const initialFormData = {
   Codigo_Producto: '',
   categoria: '',
   peso_kg: '',
+  fabricante: '',
   caracteristicas: {
     nombre_del_producto: '',
     modelo: '',
@@ -48,6 +49,7 @@ const excelTemplateHeaders = [
   'nombre_del_producto', // Raíz
   'Descripcion', // Raíz (Descripción general)
   'Modelo', // Raíz
+  'fabricante', // Raíz (Nuevo campo)
   'categoria', // Raíz (Categoría principal)
   
   // Campos que irán a datos_contables en el backend

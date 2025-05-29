@@ -3,6 +3,7 @@ export interface Producto {
   nombre_del_producto?: string;
   descripcion?: string;
   Modelo?: string;
+  fabricante?: string;
   tipo?: string;
   producto?: string;
   categoria?: string;

@@ -361,6 +361,7 @@ const Dashboard: React.FC = () => {
                     <TableCell sx={lightModeStyles.tableHead}>Nombre</TableCell>
                     <TableCell sx={lightModeStyles.tableHead}>Descripción</TableCell>
                     <TableCell sx={lightModeStyles.tableHead}>Modelo</TableCell>
+                    <TableCell sx={lightModeStyles.tableHead}>Fabricante</TableCell>
                     <TableCell sx={lightModeStyles.tableHead}>Categoría</TableCell>
                     <TableCell sx={lightModeStyles.tableHead}>Ver Detalle</TableCell>
                     <TableCell sx={lightModeStyles.tableHead}>Opcionales</TableCell>
@@ -376,6 +377,7 @@ const Dashboard: React.FC = () => {
                         <TableCell sx={lightModeStyles.tableCell}>{product.nombre_del_producto}</TableCell>
                         <TableCell sx={lightModeStyles.tableCell}>{product.Descripcion}</TableCell>
                         <TableCell sx={lightModeStyles.tableCell}>{product.Modelo}</TableCell>
+                        <TableCell sx={lightModeStyles.tableCell}>{product.fabricante || '-'}</TableCell>
                         <TableCell sx={lightModeStyles.tableCell}>{product.categoria || 'Sin categoría'}</TableCell>
                         <TableCell align="center">
                           <Tooltip title="Ver detalle">

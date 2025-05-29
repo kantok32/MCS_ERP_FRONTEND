@@ -4,6 +4,7 @@ import DetallesCargaPanel from './DetallesCargaPanel';
 import { motion } from 'framer-motion';
 import EquipoEditModal from '../components/EquipoEditModal';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Typography, Grid } from '@mui/material';
 
 const BACKEND_URL = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app';
 
@@ -127,6 +128,7 @@ interface Producto {
   detalles?: any; // O una interfaz más detallada
   [key: string]: any; // Para permitir otros campos no explícitamente definidos
   descontinuado?: boolean; // Añadido para handleToggleDescontinuado
+  fabricante?: string; // Nuevo campo para fabricante
 }
 
 const api = {
@@ -1375,6 +1377,17 @@ export default function EquiposPanel() {
               </button>
             </div>
             <div style={{...unifiedBodyStyle, maxHeight: 'calc(85vh - 110px)'}}>
+              <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}>
+                <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: '8px' }}>Información General</Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2"><strong>Fabricante:</strong> {detalleProducto.fabricante || 'No especificado'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2"><strong>Modelo:</strong> {detalleProducto.Modelo || 'No especificado'}</Typography>
+                  </Grid>
+                </Grid>
+              </div>
               {renderSpecifications(detalleProducto.especificaciones_tecnicas)}
             </div>
             <div style={unifiedFooterStyle}>
