@@ -1108,26 +1108,6 @@ export default function EquiposPanel() {
         borderBottom: '1px solid #e5e7eb', // Un separador visual ligero
         alignItems: 'flex-end' // Alinear items al final para que labels e inputs se vean bien
       }}>
-        {[ // Array de configuración para generar los filtros dinámicamente
-          { label: 'Código:', name: 'codigo_producto', placeholder: 'Filtrar Código...' },
-          { label: 'Nombre:', name: 'nombre_del_producto', placeholder: 'Filtrar Nombre...' },
-          // REMOVED: Old text input filters for Modelo and Fabricante
-        ].map(filter => (
-          <div key={filter.name} style={{ display: 'flex', flexDirection: 'column' }}>
-            <label htmlFor={`filter-${filter.name}`} style={{ fontSize: '12px', color: '#374151', marginBottom: '4px' }}>
-              {filter.label}
-            </label>
-            <input
-              type="text"
-              id={`filter-${filter.name}`}
-              name={filter.name}
-              placeholder={filter.placeholder}
-              value={columnFilters[filter.name] || ''}
-              onChange={handleColumnFilterChange}
-              style={{ ...filterInputStyle, width: '150px' }} // Ancho fijo para cada input, ajustar según necesidad
-            />
-          </div>
-        ))}
         {/* Renderizar filtros de Modelo y Fabricante como Selects */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <label htmlFor="filter-modelo" style={{ fontSize: '12px', color: '#374151', marginBottom: '4px' }}>
