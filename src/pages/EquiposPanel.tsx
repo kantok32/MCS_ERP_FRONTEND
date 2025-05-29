@@ -652,6 +652,9 @@ export default function EquiposPanel() {
               }
             }
           }
+          else if (columnKey === 'fabricante') {
+            valorColumna = producto.fabricante || '';
+          }
           return valorColumna.toLowerCase().includes(lowerFilterValue);
         });
       }
@@ -661,14 +664,20 @@ export default function EquiposPanel() {
     setTotalMostrado(productosVisiblesEnTabla.length); // Este es nuestro 'X'
 
     // --- Extraer modelos y fabricantes únicos para los filtros dropdown ---
-    const modelos = new Set<string>();
+    const modeloCounts: Record<string, number> = {};
     const fabricantes = new Set<string>();
     productosOriginales.forEach(p => {
-      if (p.modelo) modelos.add(p.modelo);
+      if (p.modelo) {
+        modeloCounts[p.modelo] = (modeloCounts[p.modelo] || 0) + 1;
+      }
       if (p.fabricante) fabricantes.add(p.fabricante);
     });
     // Convertir Sets a Arrays y ordenar alfabéticamente
-    setUniqueModelos(Array.from(modelos).sort());
+    const repeatedModelos = Object.entries(modeloCounts)
+      .filter(([model, count]) => count > 1)
+      .map(([model, count]) => model)
+      .sort();
+    setUniqueModelos(repeatedModelos);
     setUniqueFabricantes(Array.from(fabricantes).sort());
     // --- Fin Extracción ---
 
