@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
-import { Loader2, AlertTriangle, Eye, Edit, Trash2, PlusCircle, XCircle, RefreshCw, DollarSign, Euro, Calculator } from 'lucide-react';
+import { Loader2, AlertTriangle, Eye, Edit, Trash2, PlusCircle, XCircle, RefreshCw, DollarSign, Euro, Calculator, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { CostoPerfilData } from '../types';
@@ -186,6 +186,10 @@ export default function PerfilesPanel() {
   const [newProfileData, setNewProfileData] = useState(defaultNewProfileData);
   const [isCreatingProfile, setIsCreatingProfile] = useState<boolean>(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  // --- Estados para la duplicación ---
+  const [duplicatingProfileId, setDuplicatingProfileId] = useState<string | null>(null);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
 
   // --- Estados para Divisas ---
   const [dolarValue, setDolarValue] = useState<{ value: number | null, fecha: string | null, last_update: string | null } | null>(null);
@@ -796,6 +800,36 @@ export default function PerfilesPanel() {
       );
   };
 
+  // --- Handler para Duplicar Perfil ---
+  const handleDuplicateProfile = async (profileId: string) => {
+    setDuplicatingProfileId(profileId);
+    setDuplicateError(null);
+    try {
+        console.log(`[PerfilesPanel] Duplicando perfil ID: ${profileId}`);
+        const profileToDuplicate = perfiles.find(p => p._id === profileId);
+        if (!profileToDuplicate) {
+            throw new Error('Perfil no encontrado');
+        }
+        const newProfileData = {
+            ...profileToDuplicate,
+            nombre_perfil: `Copia de ${profileToDuplicate.nombre_perfil}`,
+            descripcion: `Copia de ${profileToDuplicate.descripcion}`,
+        };
+        delete newProfileData._id;
+        delete newProfileData.createdAt;
+        delete newProfileData.updatedAt;
+
+        const newProfile = await api.createProfile(newProfileData);
+        console.log(`Perfil ${profileId} duplicado exitosamente desde la API.`, newProfile);
+        loadPerfiles();
+    } catch (err) {
+        console.error(`[PerfilesPanel] Error duplicando perfil ${profileId}:`, err);
+        setDuplicateError('No se pudo duplicar el perfil. Verifique la consola para más detalles.');
+    } finally {
+        setDuplicatingProfileId(null);
+    }
+  };
+
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       
@@ -916,6 +950,14 @@ export default function PerfilesPanel() {
                   <Edit size={16} />
                 </button>
                 <button 
+                  onClick={() => handleDuplicateProfile(perfil._id)} 
+                  style={iconButtonStyle} 
+                  title="Duplicar Perfil"
+                  disabled={duplicatingProfileId === perfil._id} 
+                >
+                  {duplicatingProfileId === perfil._id ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
+                </button>
+                <button 
                   onClick={() => handleDeleteProfile(perfil._id)} 
                   style={{...iconButtonStyle, color: '#dc2626'}} 
                   title="Eliminar Perfil"
@@ -926,6 +968,9 @@ export default function PerfilesPanel() {
               </div>
               {deleteError && deletingProfileId === perfil._id && (
                   <p style={{ color: '#DC2626', fontSize: '12px', marginTop: '5px' }}>{deleteError}</p>
+              )}
+              {duplicateError && duplicatingProfileId === perfil._id && (
+                  <p style={{ color: '#DC2626', fontSize: '12px', marginTop: '5px' }}>{duplicateError}</p>
               )}
             </div>
           ))}

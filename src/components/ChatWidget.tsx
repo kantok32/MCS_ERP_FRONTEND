@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { Send, MessageSquare, X, Minus } from 'lucide-react';
+import { Send, MessageSquare, X, Minus, Loader2 } from 'lucide-react';
 import './ChatWidget.css'; // Crearemos este archivo para los estilos
 
 // --- Definición de ProductTable (Movido aquí) ---
@@ -272,9 +272,32 @@ const ChatWidget = forwardRef<ChatWidgetHandle, ChatWidgetProps>((props, ref) =>
           </div>
         </div>
       ) : (
-        // --- Botón burbuja ahora usa onBubbleClick de las props --- 
-        <button onClick={onBubbleClick} className="chat-bubble">
-          <MessageSquare />
+        // Renderiza la burbuja del chat solo si no está abierto el modal
+        <button 
+          className="chat-bubble" 
+          onClick={onBubbleClick} 
+          style={{ 
+            backgroundColor: '#A0AEC0', 
+            cursor: 'not-allowed', 
+            position: 'relative', // Add position relative to contain the absolute line
+            overflow: 'hidden' // Hide overflowing line parts if any
+          }} 
+        >
+          {/* Horizontal line to indicate it's disabled */}
+          <div style={{
+            position: 'absolute',
+            top: '50%', // Center vertically
+            left: '50%', // Center horizontally
+            width: '150%', // Make it wider to cover the circle diagonally
+            height: '2px', // Line thickness
+            backgroundColor: '#D1D5DB', // A lighter grey color (Tailwind gray-300)
+            transform: 'translate(-50%, -50%) rotate(-45deg)', // Center and rotate in the reverse direction
+            zIndex: 1, // Ensure line is above the icon
+          }}></div>
+          {/* Icon */}
+          <div style={{ position: 'relative', zIndex: 2 }}> {/* Ensure icon is above the line */}
+             {isLoading ? <Loader2 size={24} className="animate-spin" /> : <MessageSquare size={24} />} 
+          </div>
         </button>
       )}
     </div>

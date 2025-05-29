@@ -320,7 +320,8 @@ export default function App() {
   // Ejemplo de función que SÍ pertenece a App.tsx (manejo del chat)
   const handleOpenChatClick = () => {
     console.log('[App] Botón flotante clickeado -> Abrir Chat');
-    chatWidgetRef.current?.openChat();
+    // chatWidgetRef.current?.openChat(); // Desactivar la apertura del chat
+    alert('Próximamente'); // Mostrar mensaje
   };
   
   // useEffect para manejar la tecla ESC para modales GLOBALES si los hubiera,
@@ -353,7 +354,16 @@ export default function App() {
                 <img src={ecoAllianceLogo} alt="Logo" style={logoImageStyle} />
               </div> 
               */}
-              <Link to="/dashboard" style={getLinkStyle('/dashboard')}>
+              <Link to="/dashboard" style={{
+                 ...getLinkStyle('/dashboard'),
+                 color: '#A0AEC0', // Tailwind gray-400
+                 textDecoration: 'line-through',
+              }}
+              onClick={(e) => {
+                e.preventDefault(); // Prevent default navigation
+                alert('Próximamente'); // Show message
+              }}
+              >
                  <div style={navLinkTextStyle}> 
                    <LayoutDashboard size={18} style={navIconStyle} />
                    DASHBOARD
