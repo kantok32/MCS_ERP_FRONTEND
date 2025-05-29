@@ -137,12 +137,6 @@ interface GroupedPruebaResults {
     conversion_margen: { ... };
     precios_cliente: { ... };
     */
-    // Añadir campo para el producto principal utilizado en la prueba
-    producto_principal_usado?: {
-        codigo_producto: string;
-        nombre_del_producto?: string;
-        Descripcion?: string;
-    };
 }
 
 interface PruebaApiValues {
@@ -1209,45 +1203,73 @@ export default function PerfilesPanel() {
                {pruebaError && <Alert severity="error" sx={{ flexGrow: 1 }}>{pruebaError}</Alert>}
            </Box>
 
-           {/* --- Resultados del Cálculo --- */}
-           {isCalculatingPrueba && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3 }}>
-                  <CircularProgress size={24} sx={{ mr: 2 }} />
-                  <Typography>Calculando...</Typography>
+
+           {/* --- Sección de Resultados --- */}
+           {(pruebaResults || pruebaApiValues || pruebaInputValuesUsed) && <Divider sx={{ my: 2 }} />}
+
+           {/* Mostrar Inputs Usados */}
+           {pruebaInputValuesUsed && (
+              <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>Valores Input Usados en Cálculo</Typography>
+                  <Grid container spacing={0.5}> 
+                      {Object.entries(pruebaInputValuesUsed).map(([key, value]) => {
+                          let label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                          let formattedValue: string | number = String(value); // Initialize here
+
+                          if (key.includes('_fromProfile')) {
+                              label = key.replace('_fromProfile', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) + ' (Perfil)';
+                              // Formato específico según el tipo de valor del perfil
+                              if (key.startsWith('tasa') || key.startsWith('buffer') || key.startsWith('descuento') || key.startsWith('derecho') || key.startsWith('iva') || key.startsWith('margen')) {
+                                 formattedValue = formatPercentDisplay(value as number | null | undefined, 4); 
+                              } else if (key.startsWith('costoOrigenEUR')) {
+                                 formattedValue = formatGenericCurrency(value as number | null | undefined, 'EUR', 2); // Usar formato EUR con 2 decimales
+                              } else if (key.startsWith('flete') || key.startsWith('recargos') || key.startsWith('costoAgente') || key.startsWith('gastos')) {
+                                 formattedValue = formatGenericCurrency(value as number | null | undefined, 'USD', 2); // Usar formato USD con 2 decimales
+                              } else if (key.startsWith('transporte')) { 
+                                 formattedValue = formatCLP(value as number | null | undefined); // Usar formato CLP
+                              } else {
+                                 // Fallback para otros valores del perfil (si los hubiera)
+                                 formattedValue = typeof value === 'number' ? value.toLocaleString('es-CL', {maximumFractionDigits: 6}) : String(value);
+                              }
+                          } else {
+                              // Formato para inputs que NO vienen del perfil (años, costo fábrica base, tc actual)
+                              if(key.includes('tipoCambio')){
+                                  formattedValue = formatExchangeRate(value as number | null | undefined);
+                              } else if (key.includes('EUR')){
+                                  formattedValue = formatGenericCurrency(value as number | null | undefined, 'EUR', 2);
+                              } else {
+                                  formattedValue = typeof value === 'number' ? value.toLocaleString('es-CL', {maximumFractionDigits: 0}) : String(value); // Años sin decimales
+                              }
+                          }
+
+                          return (
+                              <React.Fragment key={key}>
+                                  <Grid item xs={7}><Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{label}:</Typography></Grid>
+                                  <Grid item xs={5}><Typography variant="body2" align="right" sx={{ fontWeight: '500', fontSize: '0.8rem' }}>{formattedValue}</Typography></Grid>
+                              </React.Fragment>
+                          );
+                      })}
+                  </Grid>
               </Box>
            )}
+           
+           {/* Mostrar Valores API Usados (igual que antes) */}
+           {pruebaApiValues && (
+               <Box sx={{ mb: 2 }}>
+                   <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>Valores API Usados</Typography>
+                    <Grid container spacing={1}>
+                       <Grid item xs={6}><Typography variant="body2">TC USD/CLP Actual:</Typography></Grid>
+                       <Grid item xs={6}><Typography variant="body2" align="right">{formatCLP(pruebaApiValues.tipo_cambio_usd_clp_actual)}</Typography></Grid>
+                       <Grid item xs={6}><Typography variant="body2">TC EUR/USD Actual:</Typography></Grid>
+                       <Grid item xs={6}><Typography variant="body2" align="right">{formatExchangeRate(pruebaApiValues.tipo_cambio_eur_usd_actual)}</Typography></Grid>
+                    </Grid>
+               </Box>
+           )}
 
-           {pruebaError && <Alert severity="error" sx={{ mt: 3 }}>{pruebaError}</Alert>}
-
-           {pruebaResults && !isCalculatingPrueba && !pruebaError && (
-               <Box sx={{ mt: 3 }}>
-                   <Typography variant="h6" gutterBottom>Resultados del Cálculo</Typography>
-
-                   {/* Mostrar Producto Principal si está en los resultados */}
-                   {pruebaResults.producto_principal_usado && (
-                       <Box sx={{ mb: 2, p: 1.5, border: '1px solid #eee', borderRadius: '4px' }}>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                                Equipo Principal:
-                            </Typography>
-                            <Typography variant="body1">
-                                {pruebaResults.producto_principal_usado.nombre_del_producto || pruebaResults.producto_principal_usado.Descripcion || pruebaResults.producto_principal_usado.codigo_producto || 'Nombre no disponible'}
-                            </Typography>
-                       </Box>
-                   )}
-
-                   {/* Mostrar Valores API Usados */}
-                   {pruebaApiValues && (
-                       <Box sx={{ mb: 2 }}>
-                           <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>Valores API Usados</Typography>
-                            <Grid container spacing={1}>
-                               <Grid item xs={6}><Typography variant="body2">TC USD/CLP Actual:</Typography></Grid>
-                               <Grid item xs={6}><Typography variant="body2" align="right">{formatCLP(pruebaApiValues.tipo_cambio_usd_clp_actual)}</Typography></Grid>
-                               <Grid item xs={6}><Typography variant="body2">TC EUR/USD Actual:</Typography></Grid>
-                               <Grid item xs={6}><Typography variant="body2" align="right">{formatExchangeRate(pruebaApiValues.tipo_cambio_eur_usd_actual)}</Typography></Grid>
-                            </Grid>
-                       </Box>
-                   )}
-
+           {/* Mostrar Resultados Calculados */}
+           {pruebaResults && (
+               <Box>
+                   <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', mt: 1 }}>Resultados Calculados</Typography>
                    {/* Renderizar sección Costo de Producto */}
                    {pruebaResults.costo_producto && renderResultSection("Costo de Producto", pruebaResults.costo_producto, resultLabels.costo_producto)}
                    {/* Renderizar NUEVA sección Logística y Seguro */} 

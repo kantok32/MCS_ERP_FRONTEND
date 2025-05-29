@@ -5,8 +5,6 @@ import { motion } from 'framer-motion';
 import EquipoEditModal from '../components/EquipoEditModal';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Typography, Grid } from '@mui/material';
-import { transformSpecificationsToArray } from '../utils/specificationsTransformer';
-import { EspecificacionTecnica } from '../types';
 
 const BACKEND_URL = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app';
 
@@ -34,6 +32,11 @@ interface ApiResponse {
   timestamp: string;
   message?: string;
   error?: string;
+}
+
+interface EspecificacionTecnica {
+  caracteristica: string;
+  especificacion: string;
 }
 
 // Interfaz para la respuesta de opcionales
@@ -141,76 +144,84 @@ const api = {
 // --- Fin Placeholder API ---
 
 // --- Helper function para renderizar especificaciones anidadas ---
-const renderSpecifications = (specs: any, producto: Producto) => {
-  if (!specs) {
+const renderSpecifications = (specs: any) => {
+  if (!specs || typeof specs !== 'object' || Object.keys(specs).length === 0) {
     return <p style={{ fontSize: '13px', color: '#6B7280' }}>No hay especificaciones técnicas detalladas disponibles.</p>;
   }
 
-  // Transformar las especificaciones al nuevo formato si es necesario
-  const specsArray: EspecificacionTecnica[] = Array.isArray(specs) 
-    ? specs 
-    : transformSpecificationsToArray(specs, producto.codigo_producto || '');
-
-  return (
-    <div style={{ marginBottom: '20px' }}>
-      <h4 style={{ 
-        fontSize: '20px', 
-        fontWeight: 700, 
-        color: '#1e88e5', 
-        borderBottom: '2px solid #e0e0e0', 
-        paddingBottom: '12px', 
-        marginBottom: '24px',
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px'
-      }}>
-        Especificaciones Técnicas
-      </h4>
-
-      {specsArray.length === 0 ? (
-        <p style={{ fontSize: '13px', color: '#6B7280' }}>No hay especificaciones técnicas detalladas disponibles.</p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {specsArray.map((item: EspecificacionTecnica, index: number) => {
-            const valor = producto.codigo_producto ? item.valores[producto.codigo_producto] || '-' : '-';
-            
-            return (
-              <div 
-                key={item.clave || index}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '300px 1fr',
-                  gap: '16px',
-                  padding: '12px 16px',
-                  backgroundColor: index % 2 === 0 ? 'white' : '#F9FAFB',
-                  borderRadius: '6px',
-                  alignItems: 'center',
-                  border: '1px solid #E5E7EB'
-                }}
-              >
-                <dt style={{ 
-                  fontSize: '14px', 
-                  fontWeight: 600, 
-                  color: '#4B5563',
-                  margin: 0
-                }}>
-                  {item.nombre}:
-                </dt>
-                <dd style={{ 
-                  fontSize: '14px', 
-                  color: '#1F2937', 
-                  margin: 0, 
-                  wordBreak: 'break-word',
-                  lineHeight: '1.5'
-                }}>
-                  {valor}
-                </dd>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+  // Si specs es un objeto plano (todos los valores son primitivos o strings), mostrar como lista simple
+  const isFlatObject = Object.values(specs).every(
+    v => typeof v !== 'object' || v === null
   );
+  if (isFlatObject) {
+    return (
+      <div style={{ marginBottom: '20px' }}>
+        <h4 style={{ fontSize: '15px', fontWeight: 600, color: '#1e88e5', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px', marginBottom: '12px' }}>
+          Especificaciones Técnicas
+        </h4>
+        <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px', alignItems: 'center' }}>
+          {Object.entries(specs).map(([key, value]) => (
+            <React.Fragment key={key}>
+              <dt style={{ fontSize: '13px', fontWeight: 500, color: '#4B5563' }}>{key.replace(/_/g, ' ')}:</dt>
+              <dd style={{ fontSize: '13px', color: '#1F2937', margin: 0, wordBreak: 'break-word' }}>
+                {typeof value === 'boolean' ? (value ? 'Sí' : 'No') : value === null || value === undefined ? '-' : String(value)}
+              </dd>
+            </React.Fragment>
+          ))}
+        </dl>
+      </div>
+    );
+  }
+
+  // Orden específico deseado para las categorías principales
+  const categoryOrder = [
+    'DIMENSIONES', 
+    'SISTEMA DE POTENCIA', 
+    'SISTEMA DE ALIMENTACIÓN', 
+    'SISTEMA DE CORTE', 
+    'CARACTERÍSTICAS CHASIS Y ACCESORIOS', 
+    'EXIGENCIAS Y SISTEMA DE SEGURIDAD', 
+    'GRUA' 
+    // Añadir otras categorías si existen y se requiere un orden específico
+  ];
+
+  const sortedCategories = Object.keys(specs).sort((a, b) => {
+    const indexA = categoryOrder.indexOf(a);
+    const indexB = categoryOrder.indexOf(b);
+    // Poner categorías conocidas al principio, en el orden definido
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+    if (indexA !== -1) return -1; // a viene antes si está en la lista y b no
+    if (indexB !== -1) return 1;  // b viene antes si está en la lista y a no
+    // Ordenar alfabéticamente las categorías no especificadas
+    return a.localeCompare(b); 
+  });
+
+  return sortedCategories.map((category) => {
+    const details = specs[category];
+    // No renderizar si la categoría está vacía o no es un objeto válido
+    if (!details || typeof details !== 'object' || Object.keys(details).length === 0) {
+      return null; 
+    }
+    
+    return (
+      <div key={category} style={{ marginBottom: '20px' }}>
+        <h4 style={{ fontSize: '15px', fontWeight: 600, color: '#1e88e5', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px', marginBottom: '12px' }}>
+          {category.replace(/_/g, ' ')} {/* Reemplazar guiones bajos por espacios */}
+        </h4>
+        <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px', alignItems: 'center' }}>
+          {Object.entries(details).map(([key, value]) => (
+            <React.Fragment key={key}>
+              <dt style={{ fontSize: '13px', fontWeight: 500, color: '#4B5563' }}>{key.replace(/_/g, ' ')}:</dt>
+              <dd style={{ fontSize: '13px', color: '#1F2937', margin: 0, wordBreak: 'break-word' }}>
+                {/* Manejar booleanos, nulos o undefined de forma explícita */}
+                {typeof value === 'boolean' ? (value ? 'Sí' : 'No') : value === null || value === undefined ? '-' : String(value)}
+              </dd>
+            </React.Fragment>
+          ))}
+        </dl>
+      </div>
+    );
+  }).filter(Boolean); // Filtrar elementos null si alguna categoría estaba vacía
 };
 
 const filterInputStyle: React.CSSProperties = {
@@ -1429,7 +1440,7 @@ export default function EquiposPanel() {
                   </Grid>
                 </Grid>
               </div>
-              {renderSpecifications(detalleProducto.especificaciones_tecnicas, detalleProducto)}
+              {renderSpecifications(detalleProducto.especificaciones_tecnicas)}
             </div>
             <div style={unifiedFooterStyle}>
               <button onClick={handleCloseDetalleModal} style={unifiedSecondaryButtonStyle}>
