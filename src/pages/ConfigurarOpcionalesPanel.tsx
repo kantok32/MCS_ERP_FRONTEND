@@ -4,6 +4,13 @@ import { Button, Typography, Checkbox, CircularProgress, Paper, Box, Grid, IconB
 import { ArrowLeft, ArrowRight, RefreshCw, ChevronDown, ChevronUp, Info, AlertTriangle, Search } from 'lucide-react';
 import { fetchProductByCode, fetchFilteredProducts, searchProducts } from '../services/productService';
 
+// Helper para capitalizar texto al estilo español (primera letra mayúscula)
+const capitalizeSpanish = (text: string): string => {
+  if (!text) return '';
+  const trimmedText = text.trim();
+  return trimmedText.charAt(0).toUpperCase() + trimmedText.slice(1);
+};
+
 // --- Interfaces (muchas de estas podrían venir de un archivo de tipos global) ---
 interface Producto {
   _id?: string;
@@ -55,7 +62,7 @@ interface LocationState {
   // Original state from EquiposPanel
   productosPrincipales?: Producto[]; 
 
-  // New state from HistorialDetallePage
+  // New State from HistorialDetallePage
   fromHistory?: boolean;
   mainProductCodigo?: string;
   selectedOptionalCodigos?: string[];
@@ -100,17 +107,13 @@ export default function ConfigurarOpcionalesPanel() {
     const API_BASE_URL = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api';
 
     try {
-      // Buscar modelo de forma flexible: primero en modelo (minúscula), luego en caracteristicas.modelo, luego en Modelo (capitalizado)
       const modeloParaBuscar = principal.modelo || principal.caracteristicas?.modelo || principal.Modelo;
-      // Obtener categoría
       const categoriaParaBuscar = principal.categoria;
 
-      // Validar que tenemos un modelo válido y la categoría
       if (!modeloParaBuscar || typeof modeloParaBuscar !== 'string' || modeloParaBuscar.trim() === '' || modeloParaBuscar.trim() === '-' || !categoriaParaBuscar || typeof categoriaParaBuscar !== 'string' || categoriaParaBuscar.trim() === '') {
           throw new Error('Faltan parámetros requeridos (modelo o categoría) del producto principal para buscar opcionales.');
       }
 
-      // Extraer solo la parte del modelo antes del primer espacio, si existe (coincidiendo con la lógica anterior y la esperada por backend)
       const baseModelo = modeloParaBuscar.split(' ')[0];
 
       console.log('[ConfigurarOpcionalesPanel] Buscando opcionales para producto (GET):', {
@@ -136,31 +139,14 @@ export default function ConfigurarOpcionalesPanel() {
         throw new Error(data.message || `Error del servidor: ${response.status}`);
       }
 
-      // La respuesta del endpoint /opcionales (GET) devuelve la lista en data.data?.products o data.products
       const opcionales = data.data?.products || data.products || [];
-
-      // No aplicamos un filtro adicional aquí basado en asignado_a_codigo_principal y modelo, 
-      // ya que se espera que el backend devuelva solo los opcionales relevantes con el endpoint /opcionales (GET).
-      // La validación básica de código y nombre se mantiene si es necesaria, pero no el filtro de asignación.
-      const opcionalesFiltrados = opcionales.filter((opcional: Producto) =>
-         opcional.codigo_producto && opcional.nombre_del_producto // Mantener esta validación si es crucial
-      );
-      
-      // Usar los opcionales tal cual vienen del backend, asumiendo que ya están filtrados por asignación
       const opcionalesFinal = opcionales;
 
       console.log('[ConfigurarOpcionalesPanel] Opcionales recibidos y procesados:', opcionalesFinal);
 
-      // if (opcionalesFinal.length === 0) { // Ya no se trata como un error
-      //   setErrorOpcionales(prev => ({
-      //     ...prev,
-      //     [principal.codigo_producto!]: 'No se encontraron opcionales para este producto.' 
-      //   }));
-      // }
-      // Asegurarse de que no haya un error previo para este producto si ahora la lista está vacía pero la llamada fue exitosa
       setErrorOpcionales(prev => ({ 
         ...prev, 
-        [principal.codigo_producto!]: null // Limpiar error si la llamada fue exitosa, incluso si no hay opcionales
+        [principal.codigo_producto!]: null 
       }));
 
       setOpcionalesDisponibles(prev => ({ ...prev, [principal.codigo_producto!]: opcionalesFinal }));
@@ -188,7 +174,6 @@ export default function ConfigurarOpcionalesPanel() {
           if (!mainProduct) {
             throw new Error(`Producto principal con código ${state.mainProductCodigo} no encontrado.`);
           }
-          // Asignamos la categoría 'principal' al producto cargado desde el historial
           const mainProductWithCategory = {
             ...mainProduct,
             categoria: 'principal'
@@ -220,7 +205,6 @@ export default function ConfigurarOpcionalesPanel() {
           }
         }
       } else if (state?.productosPrincipales && state.productosPrincipales.length > 0) {
-        // Asignamos la categoría 'principal' a todos los productos cargados desde el estado
         const productosPrincipalesWithCategory = state.productosPrincipales.map(p => ({
           ...p,
           categoria: 'principal'
@@ -235,7 +219,7 @@ export default function ConfigurarOpcionalesPanel() {
         productosPrincipalesWithCategory.forEach(p => {
           if (p.codigo_producto) {
             initialSelections[p.codigo_producto] = new Set<string>();
-            initialExpanded[p.codigo_producto] = true; // Expandir por defecto cuando viene de EquiposPanel
+            initialExpanded[p.codigo_producto] = true; 
             fetchOpcionalesParaPrincipal(p);
             if (p.descontinuado) {
               descontinuadoEncontrado = true;
@@ -252,13 +236,11 @@ export default function ConfigurarOpcionalesPanel() {
           setShowDiscontinuedWarning(true);
         }
       } else {
-        // No hay estado inicial para cargar un producto, el usuario debe buscar y agregar
         console.log('[ConfigurarOpcionalesPanel] No hay estado específico para carga inicial. Estableciendo productosPrincipales como array vacío.');
         setProductosPrincipales([]); 
       }
     };
 
-    // Solo ejecutar carga inicial si no está ya poblado por una carga manual de producto
     if (productosPrincipales.length === 0) {
         console.log('[ConfigurarOpcionalesPanel] useEffect: productosPrincipales está vacío, llamando a loadDataFromState.');
         loadDataFromState();
@@ -288,19 +270,18 @@ export default function ConfigurarOpcionalesPanel() {
         return;
       }
 
-      // Filtramos para mostrar solo productos principales
-      const productosPrincipales = results.filter(producto => 
+      const productosPrincipalesResult = results.filter(producto => 
         producto.codigo_producto && 
         producto.nombre_del_producto && 
         !producto.es_opcional
       );
 
-      if (productosPrincipales.length === 0) {
+      if (productosPrincipalesResult.length === 0) {
         setSearchError('No se encontraron productos principales con ese término de búsqueda.');
         return;
       }
 
-      setSearchResults(productosPrincipales);
+      setSearchResults(productosPrincipalesResult);
     } catch (error: any) {
       console.error('[ConfigurarOpcionalesPanel] Error en búsqueda:', error);
       setSearchError(error.message || 'Error al buscar productos.');
@@ -326,12 +307,10 @@ export default function ConfigurarOpcionalesPanel() {
     try {
       console.log('[ConfigurarOpcionalesPanel] Cargando producto:', selectedProductForAddition);
       
-      // Verificamos que el producto tenga los datos necesarios
       if (!selectedProductForAddition.codigo_producto || !selectedProductForAddition.Modelo) {
         throw new Error('El producto seleccionado no tiene todos los datos necesarios.');
       }
 
-      // Verificamos si el producto ya está en la lista
       const productoExistente = productosPrincipales.find(
         p => p.codigo_producto === selectedProductForAddition.codigo_producto
       );
@@ -341,7 +320,6 @@ export default function ConfigurarOpcionalesPanel() {
         return;
       }
 
-      // Agregamos el producto a la lista
       const nuevoProducto = {
         ...selectedProductForAddition,
         categoria: 'principal'
@@ -349,22 +327,18 @@ export default function ConfigurarOpcionalesPanel() {
 
       setProductosPrincipales(prev => [...prev, nuevoProducto]);
       
-      // Expandimos el nuevo producto
       setExpandedPrincipales(prev => ({
         ...prev,
         [nuevoProducto.codigo_producto!]: true
       }));
 
-      // Inicializamos el conjunto de opcionales seleccionados para este producto
       setOpcionalesSeleccionados(prev => ({
         ...prev,
         [nuevoProducto.codigo_producto!]: new Set<string>()
       }));
 
-      // Cargamos los opcionales para el nuevo producto
       await fetchOpcionalesParaPrincipal(nuevoProducto);
 
-      // Limpiamos la búsqueda
       setSearchTerm('');
       setSearchResults([]);
       setSelectedProductForAddition(null);
@@ -408,7 +382,6 @@ export default function ConfigurarOpcionalesPanel() {
 
     console.log("Configuración de opcionales confirmada:", itemsParaProcesar);
     
-    // Navegar al siguiente paso (Resumen y Configuración de Carga o Resultados)
     navigate('/resumen-carga', {
       state: {
         itemsParaCotizar: itemsParaProcesar,
@@ -420,8 +393,6 @@ export default function ConfigurarOpcionalesPanel() {
     setShowDiscontinuedWarning(false);
   };
 
-  // Mostrar indicador de carga si los productos se están cargando desde el estado inicialmente
-  // y no se ha cargado ningún producto nuevo mediante búsqueda aún.
   if (productosPrincipales.length === 0 && ( (state?.fromHistory && state.mainProductCodigo) || (state?.productosPrincipales && state.productosPrincipales.length > 0 ) )) {
     let isLoadingFromState = false;
     if (state?.fromHistory && state.mainProductCodigo && loadingOpcionales[state.mainProductCodigo]) {
@@ -444,7 +415,6 @@ export default function ConfigurarOpcionalesPanel() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Sección de Búsqueda y Carga de Nuevo Producto Principal */}
       <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
           Cargar Nuevo Producto Principal para Configurar
@@ -456,7 +426,7 @@ export default function ConfigurarOpcionalesPanel() {
               options={searchResults}
               getOptionLabel={(option) => `${option.nombre_del_producto || 'Nombre no disponible'} (${option.codigo_producto || 'Código no disponible'})`}
               inputValue={searchTerm}
-              onInputChange={handleSearch}
+              onInputChange={(event, newInputValue) => setSearchTerm(newInputValue)}
               onChange={handleSelectProductForAddition}
               loading={loadingSearch}
               loadingText="Buscando..."
@@ -464,7 +434,7 @@ export default function ConfigurarOpcionalesPanel() {
               renderInput={(params) => (
                 <TextField 
                   {...params} 
-                  label="Buscar producto por código o nombre" 
+                  label="Buscar producto por código o nombre"
                   variant="outlined"
                   InputProps={{
                     ...params.InputProps,
@@ -507,7 +477,6 @@ export default function ConfigurarOpcionalesPanel() {
         {searchError && <Alert severity="error" sx={{ mt: 2 }}>{searchError}</Alert>}
       </Paper>
 
-      {/* Modal de Advertencia para Descontinuados */}
       <Dialog
         open={showDiscontinuedWarning}
         onClose={handleCloseDiscontinuedWarning}
@@ -580,7 +549,7 @@ export default function ConfigurarOpcionalesPanel() {
                             />
                             <Box>
                                 <Typography variant="body2" component="span" sx={{ fontWeight: 500 }}>
-                                { (opcional.nombre_del_producto || opcional.codigo_producto || '').replace(/^:\s*/, '').replace(/^Opcional:\s*/i, '').trim() }
+                                { capitalizeSpanish((opcional.nombre_del_producto || opcional.codigo_producto || '').replace(/^:\s*/, '').replace(/^Opcional:\s*/i, '').trim()) }
                                 </Typography>
                             </Box>
                           </Paper>
