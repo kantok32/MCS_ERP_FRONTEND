@@ -184,7 +184,7 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
     }
     const profileNameFromCalc = detalle.profileName;
     const currentProfileName = profile?.nombre_perfil;
-    const displayProfileName = currentProfileName || profileNameFromCalc || "Perfil Desconocido";
+    const displayProfileName = capitalizeFirstLetter(currentProfileName || profileNameFromCalc || "Perfil Desconocido");
     const displayProfileId = profile?._id || "ID Desconocido"; 
     const inputs = detalle.inputs;
     const calculados = detalle.calculados;
@@ -236,7 +236,7 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
     return (
         <Box sx={{ mt: 2, p: 2, border: '1px dashed grey' }}>
             <Typography variant="h6" gutterBottom>
-                Detalle del Cálculo (Perfil: {displayProfileName} - ID: {displayProfileId})
+                Detalle del cálculo (Perfil: {displayProfileName} - ID: {displayProfileId})
             </Typography>
 
             <Accordion sx={{ mb: 1 }}>
@@ -432,7 +432,7 @@ function transformarLineasParaConfiguracion(lineas: LineaDeTrabajoConCosto[], no
 }
 
 export default function ResultadosCalculoCostosPanel() {
-  const location = useLocation<LocationState>();
+  const location = useLocation();
   const navigate = useNavigate();
 
   const [lineasCalculadas, setLineasCalculadas] = useState<LineaDeTrabajoConCosto[]>([]);
@@ -571,7 +571,7 @@ export default function ResultadosCalculoCostosPanel() {
         console.error(`Error procesando línea para ${linea.principal.codigo_producto} en realizarCalculoDetalladoSingleLine:`, error);
         return { 
             ...linea, 
-            detalleCalculoPrincipal: { error: `Error general procesando ${linea.principal.codigo_producto}` },
+            detalleCalculoPrincipal: { error: `Error general procesando ${capitalizeFirstLetter(linea.principal.nombre_del_producto || linea.principal.codigo_producto || 'producto')}` },
             precioVentaTotalClienteCLPPrincipal: undefined
         };
     }
@@ -677,11 +677,11 @@ export default function ResultadosCalculoCostosPanel() {
             setLatestCalculatedResults(resultadosTransformados);
             setSaveSuccessMessage(null);
         } else {
-            setErrorCarga(`Error recalculando ${lineaOriginal.principal.nombre_del_producto || 'producto'}.`);
+            setErrorCarga(`Error recalculando ${capitalizeFirstLetter(lineaOriginal.principal.nombre_del_producto || 'producto')}.`);
         }
     } catch (err: any) {
         console.error(`Error recalculando línea ${principalCodigo} con perfil ${newProfileId}:`, err);
-        setErrorCarga(`Error recalculando ${lineaOriginal.principal.nombre_del_producto || 'producto'}: ${err.message}`);
+        setErrorCarga(`Error recalculando ${capitalizeFirstLetter(lineaOriginal.principal.nombre_del_producto || 'producto')}: ${err.message}`);
     } finally {
         setRecalculatingLine(null);
     }
@@ -837,7 +837,7 @@ export default function ResultadosCalculoCostosPanel() {
                 {profileError}
             </Alert>
             <Button variant="outlined" onClick={() => navigate('/admin/perfiles')}>
-                Ir a Gestión de Perfiles
+                Ir a gestión de perfiles
             </Button>
         </Container>
     );
@@ -898,7 +898,7 @@ export default function ResultadosCalculoCostosPanel() {
               <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls={`${key}-content`} id={`${key}-header`}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 2, flexWrap: 'wrap' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 'medium', flexGrow: 1, flexBasis: {xs: '100%', md: '40%'}, minWidth: '200px', order: {xs:1, md:1} }}>
-                    {linea.principal.nombre_del_producto || linea.principal.codigo_producto}
+                    {(linea.principal.nombre_del_producto || linea.principal.codigo_producto || 'Producto Desconocido').toUpperCase()}
                   </Typography>
 
                   {perfilesList.length > 0 && (

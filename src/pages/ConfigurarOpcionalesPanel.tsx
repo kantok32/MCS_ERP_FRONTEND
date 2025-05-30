@@ -405,7 +405,7 @@ export default function ConfigurarOpcionalesPanel() {
         return (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <CircularProgress />
-            <Typography sx={{ mt: 2 }}>Cargando configuración de opcionales...</Typography>
+            <Typography sx={{ mt: 2 }}>Cargando Configuración de Opcionales...</Typography>
           </Box>
         );
     }
@@ -470,11 +470,11 @@ export default function ConfigurarOpcionalesPanel() {
               disabled={!selectedProductForAddition || loadingSearch}
               startIcon={<RefreshCw size={18} />}
             >
-              Cargar Producto
+              Cargar producto
             </Button>
           </Grid>
         </Grid>
-        {searchError && <Alert severity="error" sx={{ mt: 2 }}>{searchError}</Alert>}
+        {searchError && <Alert severity="error" sx={{ mt: 2 }}>{capitalizeSpanish(searchError)}</Alert>}
       </Paper>
 
       <Dialog
@@ -489,7 +489,7 @@ export default function ConfigurarOpcionalesPanel() {
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="discontinued-warning-description">
-            El equipo "{discontinuedProductName}" (o alguno de los seleccionados) está descontinuado. Los valores y disponibilidad de opcionales pueden variar.
+            El equipo "{capitalizeSpanish(discontinuedProductName)}" (o alguno de los seleccionados) está descontinuado. Los valores y disponibilidad de opcionales pueden variar.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -516,7 +516,7 @@ export default function ConfigurarOpcionalesPanel() {
               sx={{ p: 2, backgroundColor: '#f5f5f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
               onClick={() => toggleExpandPrincipal(principal.codigo_producto!)}
             >
-              <Typography variant="h6">{principal.nombre_del_producto || principal.codigo_producto}</Typography>
+              <Typography variant="h6">{capitalizeSpanish(principal.nombre_del_producto || principal.codigo_producto || 'Equipo Desconocido')}</Typography>
               <IconButton size="small">
                 {expandedPrincipales[principal.codigo_producto!] ? <ChevronUp /> : <ChevronDown />}
               </IconButton>
@@ -527,7 +527,7 @@ export default function ConfigurarOpcionalesPanel() {
                 {loadingOpcionales[principal.codigo_producto!] && <CircularProgress size={24} sx={{my: 2}}/>}
                 {errorOpcionales[principal.codigo_producto!] && (
                   <Alert severity="error" sx={{my: 2, display: 'flex', alignItems: 'center'}}>
-                    Error al cargar opcionales para {principal.nombre_del_producto || 'este equipo'}: {errorOpcionales[principal.codigo_producto!]}
+                    Error al cargar opcionales para {capitalizeSpanish(principal.nombre_del_producto || 'este equipo')}: {errorOpcionales[principal.codigo_producto!]}
                     <Button onClick={() => fetchOpcionalesParaPrincipal(principal)} size="small" startIcon={<RefreshCw size={14}/>} sx={{ml:2, whiteSpace: 'nowrap'}}>Reintentar</Button>
                   </Alert>
                 )}
@@ -535,7 +535,7 @@ export default function ConfigurarOpcionalesPanel() {
                 {!loadingOpcionales[principal.codigo_producto!] && !errorOpcionales[principal.codigo_producto!] && (
                   (opcionalesDisponibles[principal.codigo_producto!]?.length || 0) === 0 ? (
                     <Alert severity="info" sx={{ my: 2, display: 'flex', alignItems: 'center' }} icon={<Info size={20} />}>
-                      No hay opcionales disponibles para este equipo ({principal.nombre_del_producto || principal.codigo_producto}).
+                      No hay opcionales disponibles para este equipo ({capitalizeSpanish(principal.nombre_del_producto || principal.codigo_producto || 'Equipo Desconocido')}).
                     </Alert>
                   ) : (
                     <Grid container spacing={1} sx={{ my: 1 }}>
@@ -569,7 +569,7 @@ export default function ConfigurarOpcionalesPanel() {
             startIcon={<ArrowLeft />} 
             onClick={() => navigate('/equipos')}
           >
-            Volver a Selección de Equipos
+            Volver a selección de equipos
           </Button>
           <Button 
             variant="contained" 
@@ -578,7 +578,7 @@ export default function ConfigurarOpcionalesPanel() {
             onClick={handleConfirmarOpcionales}
             disabled={productosPrincipales.length === 0}
           >
-            Confirmar y Continuar
+            Confirmar y continuar
           </Button>
         </Box>
       </Paper>
