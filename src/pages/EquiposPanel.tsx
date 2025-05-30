@@ -145,11 +145,33 @@ const api = {
 
 // --- Helper function para renderizar especificaciones anidadas ---
 const renderSpecifications = (specs: any) => {
-  if (!specs || typeof specs !== 'object' || Object.keys(specs).length === 0) {
+  if (!specs || (typeof specs !== 'object' && !Array.isArray(specs)) || Object.keys(specs).length === 0) {
     return <p style={{ fontSize: '13px', color: '#6B7280' }}>No hay especificaciones técnicas detalladas disponibles.</p>;
   }
 
-  // Si specs es un objeto plano (todos los valores son primitivos o strings), mostrar como lista simple
+  // Case 1: specs is an array of { nombre, valor } objects (for flat list of technical details)
+  if (Array.isArray(specs) && specs.every(item => typeof item === 'object' && item !== null && 'nombre' in item && 'valor' in item)) {
+    if (specs.length === 0) return <p style={{ fontSize: '13px', color: '#6B7280' }}>No hay especificaciones disponibles.</p>; // Handle empty array
+    return (
+      <div style={{ marginBottom: '20px' }}>
+        <h4 style={{ fontSize: '15px', fontWeight: 600, color: '#1e88e5', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px', marginBottom: '12px' }}>
+          Especificaciones Técnicas
+        </h4>
+        <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px', alignItems: 'center' }}>
+          {specs.map((item: { nombre: any; valor: any }, index: number) => (
+            <React.Fragment key={`${item.nombre}-${index}`}>
+              <dt style={{ fontSize: '13px', fontWeight: 500, color: '#4B5563' }}>{String(item.nombre)}:</dt>
+              <dd style={{ fontSize: '13px', color: '#1F2937', margin: 0, wordBreak: 'break-word' }}>
+                {typeof item.valor === 'boolean' ? (item.valor ? 'Sí' : 'No') : item.valor === null || item.valor === undefined ? '-' : String(item.valor)}
+              </dd>
+            </React.Fragment>
+          ))}
+        </dl>
+      </div>
+    );
+  }
+
+  // Case 2: specs is a flat object of key-value pairs (original isFlatObject logic)
   const isFlatObject = Object.values(specs).every(
     v => typeof v !== 'object' || v === null
   );
@@ -173,7 +195,7 @@ const renderSpecifications = (specs: any) => {
     );
   }
 
-  // Orden específico deseado para las categorías principales
+  // Case 3: specs is an object of categories
   const categoryOrder = [
     'DIMENSIONES', 
     'SISTEMA DE POTENCIA', 
@@ -182,46 +204,72 @@ const renderSpecifications = (specs: any) => {
     'CARACTERÍSTICAS CHASIS Y ACCESORIOS', 
     'EXIGENCIAS Y SISTEMA DE SEGURIDAD', 
     'GRUA' 
-    // Añadir otras categorías si existen y se requiere un orden específico
   ];
 
   const sortedCategories = Object.keys(specs).sort((a, b) => {
-    const indexA = categoryOrder.indexOf(a);
-    const indexB = categoryOrder.indexOf(b);
-    // Poner categorías conocidas al principio, en el orden definido
+    const indexA = categoryOrder.indexOf(a.toUpperCase());
+    const indexB = categoryOrder.indexOf(b.toUpperCase());
     if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-    if (indexA !== -1) return -1; // a viene antes si está en la lista y b no
-    if (indexB !== -1) return 1;  // b viene antes si está en la lista y a no
-    // Ordenar alfabéticamente las categorías no especificadas
-    return a.localeCompare(b); 
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
+    return a.localeCompare(b);
   });
 
-  return sortedCategories.map((category) => {
-    const details = specs[category];
-    // No renderizar si la categoría está vacía o no es un objeto válido
-    if (!details || typeof details !== 'object' || Object.keys(details).length === 0) {
-      return null; 
-    }
+  const renderedCategories = sortedCategories.map((categoryKey) => { // Renamed category to categoryKey to avoid conflict
+    const details = specs[categoryKey];
     
-    return (
-      <div key={category} style={{ marginBottom: '20px' }}>
-        <h4 style={{ fontSize: '15px', fontWeight: 600, color: '#1e88e5', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px', marginBottom: '12px' }}>
-          {category.replace(/_/g, ' ')} {/* Reemplazar guiones bajos por espacios */}
-        </h4>
-        <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px', alignItems: 'center' }}>
-          {Object.entries(details).map(([key, value]) => (
-            <React.Fragment key={key}>
-              <dt style={{ fontSize: '13px', fontWeight: 500, color: '#4B5563' }}>{key.replace(/_/g, ' ')}:</dt>
-              <dd style={{ fontSize: '13px', color: '#1F2937', margin: 0, wordBreak: 'break-word' }}>
-                {/* Manejar booleanos, nulos o undefined de forma explícita */}
-                {typeof value === 'boolean' ? (value ? 'Sí' : 'No') : value === null || value === undefined ? '-' : String(value)}
-              </dd>
-            </React.Fragment>
-          ))}
-        </dl>
-      </div>
-    );
-  }).filter(Boolean); // Filtrar elementos null si alguna categoría estaba vacía
+    if (!details) return null;
+
+    // Sub-case 3.1: Details is an array of { nombre, valor } objects
+    if (Array.isArray(details) && details.every(item => typeof item === 'object' && item !== null && 'nombre' in item && 'valor' in item)) {
+      if (details.length === 0) return null;
+      return (
+        <div key={categoryKey} style={{ marginBottom: '20px' }}>
+          <h4 style={{ fontSize: '15px', fontWeight: 600, color: '#1e88e5', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px', marginBottom: '12px' }}>
+            {categoryKey.replace(/_/g, ' ')}
+          </h4>
+          <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px', alignItems: 'center' }}>
+            {details.map((item: { nombre: any; valor: any }, index: number) => (
+              <React.Fragment key={`${item.nombre}-${index}`}>
+                <dt style={{ fontSize: '13px', fontWeight: 500, color: '#4B5563' }}>{String(item.nombre)}:</dt>
+                <dd style={{ fontSize: '13px', color: '#1F2937', margin: 0, wordBreak: 'break-word' }}>
+                  {typeof item.valor === 'boolean' ? (item.valor ? 'Sí' : 'No') : item.valor === null || item.valor === undefined ? '-' : String(item.valor)}
+                </dd>
+              </React.Fragment>
+            ))}
+          </dl>
+        </div>
+      );
+    }
+    // Sub-case 3.2: Details is an object of key-value pairs
+    else if (typeof details === 'object' && !Array.isArray(details) && Object.keys(details).length > 0) {
+      return (
+        <div key={categoryKey} style={{ marginBottom: '20px' }}>
+          <h4 style={{ fontSize: '15px', fontWeight: 600, color: '#1e88e5', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px', marginBottom: '12px' }}>
+            {categoryKey.replace(/_/g, ' ')}
+          </h4>
+          <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px', alignItems: 'center' }}>
+            {Object.entries(details).map(([key, value]) => (
+              <React.Fragment key={key}>
+                <dt style={{ fontSize: '13px', fontWeight: 500, color: '#4B5563' }}>{key.replace(/_/g, ' ')}:</dt>
+                <dd style={{ fontSize: '13px', color: '#1F2937', margin: 0, wordBreak: 'break-word' }}>
+                  {typeof value === 'boolean' ? (value ? 'Sí' : 'No') : value === null || value === undefined ? '-' : String(value)}
+                </dd>
+              </React.Fragment>
+            ))}
+          </dl>
+        </div>
+      );
+    }
+    return null;
+  });
+
+  // Filter out nulls and check if any categories were rendered
+  const validRenderedCategories = renderedCategories.filter(Boolean);
+  if (validRenderedCategories.length === 0) {
+    return <p style={{ fontSize: '13px', color: '#6B7280' }}>No hay especificaciones técnicas detalladas en el formato esperado.</p>;
+  }
+  return <>{validRenderedCategories}</>; // Return a fragment if there are valid categories
 };
 
 const filterInputStyle: React.CSSProperties = {
@@ -1429,17 +1477,6 @@ export default function EquiposPanel() {
               </button>
             </div>
             <div style={{...unifiedBodyStyle, maxHeight: 'calc(85vh - 110px)'}}>
-              <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}>
-                <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: '8px' }}>Información General</Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="body2"><strong>Fabricante:</strong> {detalleProducto.fabricante || 'No especificado'}</Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="body2"><strong>Modelo:</strong> {detalleProducto.modelo || 'No especificado'}</Typography>
-                  </Grid>
-                </Grid>
-              </div>
               {renderSpecifications(detalleProducto.especificaciones_tecnicas)}
             </div>
             <div style={unifiedFooterStyle}>
