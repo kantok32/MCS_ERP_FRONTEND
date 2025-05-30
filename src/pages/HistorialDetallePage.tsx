@@ -27,20 +27,46 @@ interface ItemParaCotizarHistorial {
 // Asegúrate de que los tipos (CalculationResult, CostoPerfilData) y helpers de formato sean accesibles.
 
 // --- Helpers de Formato ---
+// Nueva función formatCLP manual
 const formatCLP = (value: number | null | undefined): string => {
-  if (value === null || value === undefined || isNaN(value)) return '--';
-  // Asegurarse de que value es tratado como número antes de redondear
+  if (value === null || value === undefined) return '--';
   const numericValue = Number(value);
-  if (isNaN(numericValue)) return '--'; // Si la conversión falla
-  
+  if (isNaN(numericValue)) return '--';
+
   const roundedValue = Math.round(numericValue);
-  // Usar Number() de nuevo en toLocaleString por si acaso, aunque roundedValue ya es un número.
-  return `$${Number(roundedValue).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`; 
+  
+  const intString = roundedValue.toString();
+  const parts = [];
+  let tempString = intString;
+  
+  // Manejar números negativos correctamente con el signo
+  let sign = '';
+  if (tempString.startsWith('-')) {
+    sign = '-';
+    tempString = tempString.substring(1);
+  }
+
+  while (tempString.length > 3) {
+    parts.unshift(tempString.slice(-3));
+    tempString = tempString.slice(0, -3);
+  }
+  if (tempString.length > 0) { // Asegurarse de no añadir un array vacío si tempString era vacío (ej. para 0)
+    parts.unshift(tempString);
+  }
+  
+  if (parts.length === 0 && roundedValue === 0) { // Caso especial para el número 0
+    return '$0';
+  }
+  if (parts.length === 0 && intString !== '0') { // Si algo salió mal y parts está vacío pero no era 0
+      return `$${sign}${intString}`; // Fallback al string original sin puntos pero con signo
+  }
+
+  return `$${sign}${parts.join('.')}`; 
 };
 
 // Actualizar formatGenericCurrency para mayor consistencia y control del símbolo
 const formatGenericCurrency = (value: number | null | undefined, currency: 'USD' | 'EUR', digits = 2): string => {
-  if (value === null || value === undefined || isNaN(value)) return '--';
+  if (value === null || value === undefined) return '--';
   
   let numberPart = Number(value).toLocaleString('es-ES', { minimumFractionDigits: digits, maximumFractionDigits: digits });
   // Quitar ,00 si los dígitos son 2 y es un entero exacto en formato es-ES
@@ -57,14 +83,18 @@ const formatGenericCurrency = (value: number | null | undefined, currency: 'USD'
 
 // Modificar formatPercentDisplay para que el default sea 0 decimales
 const formatPercentDisplay = (value: number | null | undefined, digits = 0): string => {
-  if (value === null || value === undefined || isNaN(value)) return '--';
-  return `${(Number(value) * 100).toFixed(digits)}%`;
+  if (value === null || value === undefined) return '--';
+  const numericValue = Number(value);
+  if (isNaN(numericValue)) return '--';
+  return `${(numericValue * 100).toFixed(digits)}%`;
 };
 
 const formatNumber = (value: number | null | undefined, digits = 2): string => { // Default a 2 decimales para números genéricos
-    if (value === null || value === undefined || isNaN(value)) return '--';
-    // Usar es-ES para consistencia, y quitar ,00 si es entero y digits=2
-    let formattedNumber = Number(value).toLocaleString('es-ES', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    if (value === null || value === undefined) return '--';
+    const numericValue = Number(value);
+    if (isNaN(numericValue)) return '--';
+
+    let formattedNumber = numericValue.toLocaleString('es-ES', { minimumFractionDigits: digits, maximumFractionDigits: digits });
     if (digits === 2 && formattedNumber.endsWith(',00')) {
         formattedNumber = formattedNumber.substring(0, formattedNumber.length - 3);
     }
@@ -107,15 +137,20 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
 
     const formatValue = (value: any, key: string): string => {
         const lowerKey = key.toLowerCase();
-        if (typeof value === 'number') {
-            if (lowerKey === 'factoractualizacion') return formatPercentDisplay(value, 2); // Específico para factorActualizacion
-            if (lowerKey.includes('_clp')) return formatCLP(value);
-            else if (lowerKey.endsWith('_eur')) return formatGenericCurrency(value, 'EUR');
-            else if (lowerKey.endsWith('_usd')) return formatGenericCurrency(value, 'USD');
-            // Para otros porcentajes, usará el default de formatPercentDisplay (0 decimales)
-            else if (lowerKey.includes('_pct') || lowerKey.startsWith('tasa_') || lowerKey.includes('factor')) return formatPercentDisplay(value);
-            else if (lowerKey.includes('tipo_cambio')) return formatNumber(value, 6); 
-            else return formatNumber(value); // Usará el default de 2 decimales de formatNumber
+        // Intentar convertir a número si es una cadena que representa un número, antes de typeof
+        let numericValue = value;
+        if (typeof value === 'string' && !isNaN(parseFloat(value)) && isFinite(Number(value))) {
+            numericValue = parseFloat(value);
+        }
+
+        if (typeof numericValue === 'number') {
+            if (lowerKey === 'factoractualizacion') return formatPercentDisplay(numericValue, 2); 
+            if (lowerKey.includes('_clp')) return formatCLP(numericValue);
+            else if (lowerKey.endsWith('_eur')) return formatGenericCurrency(numericValue, 'EUR');
+            else if (lowerKey.endsWith('_usd')) return formatGenericCurrency(numericValue, 'USD');
+            else if (lowerKey.includes('_pct') || lowerKey.startsWith('tasa_') || lowerKey.includes('factor')) return formatPercentDisplay(numericValue);
+            else if (lowerKey.includes('tipo_cambio')) return formatNumber(numericValue, 6); 
+            else return formatNumber(numericValue);
         }
         return value?.toString() || '--';
     };
@@ -270,4 +305,62 @@ const HistorialDetallePage: React.FC = () => {
         </Typography>
         
         {detalle.itemsParaCotizar?.map((item: ItemParaCotizarHistorial, index: number) => {
-          const principalId = `principal-${item.principal?.codigo_producto}-${index}`
+          const principalId = `principal-${item.principal?.codigo_producto}-${index}`;
+          const isPrincipalExpanded = expandedSections[principalId] !== undefined ? expandedSections[principalId] : false;
+
+          return (
+            <Box key={index} sx={{ mb: 3 }}>
+              <Paper variant="outlined" sx={{ p: 2}}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography variant="h6" gutterBottom color="primary.main" sx={{ mb: 0 }}>
+                    Equipo Principal: {item.principal?.nombre_del_producto || item.principal?.Descripcion || 'Principal sin nombre'}
+                  </Typography>
+                  <IconButton onClick={() => toggleSection(principalId)} size="small">
+                    {isPrincipalExpanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
+                  </IconButton>
+                </Box>
+                <Collapse in={isPrincipalExpanded}>
+                  <RenderResultDetails 
+                    detalle={detalle.resultadosCalculados?.[`principal-${item.principal?.codigo_producto}`]}
+                    profileName={detalle.nombrePerfil}
+                  />
+                </Collapse>
+
+                {item.opcionales && item.opcionales.length > 0 && (
+                  <Box sx={{ mt: 2, pl: 1 }}>
+                    <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium' }}>Opcionales:</Typography>
+                    {item.opcionales.map((opcional: ProductoHistorialItem, opcIndex: number) => {
+                      const opcionalId = `opcional-${opcional?.codigo_producto}-${index}-${opcIndex}`;
+                      const isOpcionalExpanded = expandedSections[opcionalId] !== undefined ? expandedSections[opcionalId] : false;
+
+                      return (
+                        <Box key={opcIndex} sx={{mb:1, borderLeft: '3px solid #e0e0e0', pl:1.5, pt:1, pb:0.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Chip label={opcional?.nombre_del_producto || opcional?.Descripcion || 'Opcional sin nombre'} size="small" sx={{mb:0.5}}/>
+                            <IconButton onClick={() => toggleSection(opcionalId)} size="small">
+                              {isOpcionalExpanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
+                            </IconButton>
+                          </Box>
+                          <Collapse in={isOpcionalExpanded}>
+                            <RenderResultDetails 
+                              detalle={detalle.resultadosCalculados?.[`opcional-${opcional?.codigo_producto}`]}
+                              profileName={detalle.nombrePerfil}
+                            />
+                          </Collapse>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                )}
+              </Paper>
+            </Box>
+          );
+        })}
+        {(!detalle.itemsParaCotizar || detalle.itemsParaCotizar.length === 0) && <Alert severity="info">No hay items para mostrar en este cálculo.</Alert>}
+
+      </Paper>
+    </Container>
+  );
+};
+
+export default HistorialDetallePage; 
