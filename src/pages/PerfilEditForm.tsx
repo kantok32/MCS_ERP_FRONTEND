@@ -22,6 +22,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  IconButton,
 } from '@mui/material';
 import { Save, X, ArrowLeft, ChevronDown } from 'lucide-react';
 import { CostoPerfilData } from '../types';
@@ -49,7 +50,7 @@ const PerfilEditForm: React.FC<PerfilEditFormProps> = ({ profileId, onSaveSucces
   const idToUse = profileId || idFromUrl;
 
   const [perfilData, setPerfilData] = useState<Partial<CostoPerfilData>>({});
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(!!idToUse); // True if editing, false if new
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   // Estado para Snackbar
@@ -58,13 +59,11 @@ const PerfilEditForm: React.FC<PerfilEditFormProps> = ({ profileId, onSaveSucces
 
   useEffect(() => {
     const fetchPerfil = async () => {
-      // Usar el ID determinado (prop o url)
-      if (!idToUse) {
-        setError('No se proporcionó un ID de perfil.');
+      if (!idToUse) { // Should not happen if loading is true initially only for idToUse
         setLoading(false);
         return;
       }
-      setLoading(true);
+      setLoading(true); // Ensure loading is true when fetching
       setError(null);
       try {
         console.log(`[PerfilEditForm] Fetching profile with ID: ${idToUse}`);
@@ -74,28 +73,35 @@ const PerfilEditForm: React.FC<PerfilEditFormProps> = ({ profileId, onSaveSucces
           setPerfilData(data);
         } else {
           setError(`No se encontró un perfil con ID: ${idToUse}`);
+          setPerfilData({}); // Clear data if not found
         }
       } catch (err: any) {
         console.error('[PerfilEditForm] Error fetching profile:', err);
         setError(err.message || 'Error al cargar los datos del perfil.');
+        setPerfilData({}); // Clear data on error
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPerfil();
-    // Depender del ID determinado
+    if (idToUse) {
+      fetchPerfil();
+    } else {
+      // For new profile, initialize with empty or default data
+      setPerfilData({}); // Or some default structure if needed
+      setLoading(false); // Not loading if it's a new profile
+    }
   }, [idToUse]);
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type, checked } = event.target as HTMLInputElement; // Asegurar tipo para checked
+    const { name, value, type } = event.target;
+    const checked = (event.target as HTMLInputElement).checked; // Cast for checkbox
 
-    // Determinar el valor correcto (número, booleano o string)
     let parsedValue: string | number | boolean = value;
     if (type === 'number') {
-      parsedValue = parseFloat(value) || 0;
+      parsedValue = parseFloat(value); // Don't default to 0, let validation handle it
       if (name.endsWith('_pct')) {
-        parsedValue = (parseFloat(value) || 0) / 100;
+        parsedValue = (parseFloat(value) || 0) / 100; // Keep /100 for backend
       }
     } else if (type === 'checkbox') {
       parsedValue = checked;
@@ -107,57 +113,61 @@ const PerfilEditForm: React.FC<PerfilEditFormProps> = ({ profileId, onSaveSucces
     }));
   };
 
-
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!idToUse || !perfilData) {
-      setError('No hay datos de perfil para guardar.');
-      return;
+    // Basic validation: if creating, ensure nombre_perfil exists
+    if (!idToUse && !perfilData?.nombre_perfil) {
+        setError('El nombre del perfil es obligatorio para crear un nuevo perfil.');
+        return;
+    }
+    if (!perfilData || Object.keys(perfilData).length === 0 && !idToUse) {
+        setError('No hay datos de perfil para guardar o el perfil está vacío.');
+        return;
     }
 
     setIsSaving(true);
     setError(null);
 
     try {
-      console.log('[PerfilEditForm] Attempting to update profile:', idToUse, perfilData);
+      console.log(`[PerfilEditForm] Attempting to ${idToUse ? 'update' : 'create'} profile:`, perfilData );
+      // Exclude fields that should not be sent on create/update directly by frontend
       const { _id, createdAt, updatedAt, ...updatePayload } = perfilData;
 
-      await api.updateProfile(idToUse, updatePayload);
-      console.log('[PerfilEditForm] Profile updated successfully');
-
-      // Mostrar Snackbar de éxito
-      setSnackbarMessage('Perfil actualizado exitosamente!');
+      if (idToUse) { // Editing existing profile
+        await api.updateProfile(idToUse, updatePayload);
+      } else { // Creating new profile
+        // This part needs to be implemented if you have a createProfile API endpoint
+        // For now, let's assume it's not fully implemented and log, or throw error
+        console.log('[PerfilEditForm] Creating new profile with payload:', updatePayload);
+        // const newProfile = await api.createProfile(updatePayload); // Uncomment and adapt if API exists
+        // setSnackbarMessage('Perfil creado exitosamente! Navegando...');
+        // navigate(`/admin/perfiles/editar/${newProfile._id}`); // Example navigation
+        throw new Error("La creación de perfiles aún no está implementada en este formulario.");
+      }
+      
+      setSnackbarMessage(`Perfil ${idToUse ? 'actualizado' : 'guardado'} exitosamente!`);
       setSnackbarOpen(true);
 
-      // Llamar a onSaveSuccess si existe (modal), si no, esperar un poco y navegar (página)
       if (onSaveSuccess) {
-        // Esperar un poco para que se vea el Snackbar antes de cerrar modal
-        setTimeout(() => {
-             onSaveSuccess();
-        }, 1500); // Espera 1.5 segundos
-      } else {
-         // Esperar un poco y navegar atrás si es página independiente
-         setTimeout(() => {
-            navigate('/admin/perfiles');
-         }, 1500); 
+        setTimeout(() => onSaveSuccess(), 1500);
+      } else if (idToUse) { // If it's a standalone page and was an edit
+        // Optionally, you can navigate or just show the message
+        // setTimeout(() => navigate('/admin/perfiles'), 1500);
       }
 
     } catch (err: any) {
-      console.error('[PerfilEditForm] Error updating profile:', err);
+      console.error('[PerfilEditForm] Error saving profile:', err);
       setError(err.response?.data?.message || err.message || 'Error al guardar el perfil.');
     } finally {
-      // No poner setIsSaving(false) inmediatamente si usamos timeout
-      // Se podría poner dentro del timeout o quitar si la navegación/cierre lo desmonta
-       // Dejémoslo aquí por ahora, se reseteará si hay error o al recargar
       setIsSaving(false);
     }
   };
 
   const handleCancel = () => {
     if (onCancel) {
-      onCancel(); // Llamar si está en modal
+      onCancel();
     } else {
-      navigate('/admin/perfiles'); // Navegar si es página
+      navigate('/admin/perfiles'); // Default back navigation for standalone page
     }
   };
 
@@ -169,201 +179,207 @@ const PerfilEditForm: React.FC<PerfilEditFormProps> = ({ profileId, onSaveSucces
   };
 
   // Función renderizadora simplificada para CostoPerfilData
-  const renderTextField = (fieldName: keyof Omit<CostoPerfilData, '_id' | 'createdAt' | 'updatedAt'>, label: string, type: string = 'text', required: boolean = false, adornment?: string) => {
-      let value: string | number = formatNumberForInput(perfilData?.[fieldName]);
-      let inputType = type;
+  const renderTextField = (
+    fieldName: keyof Omit<CostoPerfilData, '_id' | 'createdAt' | 'updatedAt'>, 
+    label: string, 
+    type: string = 'text', 
+    required: boolean = false, 
+    adornment?: string,
+    gridProps?: { xs?: number, sm?: number, md?: number }
+  ) => {
+      let valueToDisplay: string | number = formatNumberForInput(perfilData?.[fieldName]);
+      let currentInputType = type;
 
-      // Manejo especial para porcentajes (mostrar como 0-100)
       if (fieldName.endsWith('_pct') && typeof perfilData?.[fieldName] === 'number') {
-          value = ( (perfilData[fieldName] as number) * 100 ).toString();
-          inputType = 'number'; // Los porcentajes son números
+          valueToDisplay = ( (perfilData[fieldName] as number) * 100 ).toFixed(2); // Show as 10.50
+          currentInputType = 'number';
+      } else if (type === 'number' && perfilData?.[fieldName] === null) {
+        valueToDisplay = ''; // Show empty string for null numbers
       }
 
       return (
-          <TextField
-              fullWidth
-              variant="outlined"
-              margin="normal"
-              label={label}
-              name={fieldName}
-              type={inputType}
-              value={value}
-              onChange={handleInputChange}
-              required={required}
-              InputProps={adornment ? {
-                   endAdornment: <InputAdornment position="end">{adornment}</InputAdornment>,
-              } : undefined}
-              InputLabelProps={{
-                   shrink: true,
-              }}
-              inputProps={{
-                 step: inputType === 'number' ? (fieldName.endsWith('_pct') ? '0.1' : 'any') : undefined
-               }}
-              disabled={isSaving || loading}
-          />
+          <Grid item xs={12} {...gridProps}>
+            <TextField
+                fullWidth
+                variant="outlined"
+                label={label}
+                name={fieldName}
+                type={currentInputType}
+                value={valueToDisplay}
+                onChange={handleInputChange}
+                required={required}
+                InputProps={adornment ? {
+                    endAdornment: <InputAdornment position="end">{adornment}</InputAdornment>,
+                } : undefined}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ 
+                    step: currentInputType === 'number' ? (fieldName.endsWith('_pct') ? '0.01' : '0.01') : undefined 
+                    // step any for non-pct numbers, 0.01 for pct to allow two decimal places
+                }}
+                disabled={isSaving || (loading && !!idToUse)}
+            />
+          </Grid>
       );
   };
 
   // Determinar si se está usando como página o modal para renderizar
   const isStandalonePage = !onCancel && !onSaveSuccess;
 
-  if (loading) {
-     // Mostrar loader adecuado según contexto
-     return <Box sx={{ display: 'flex', justifyContent: 'center', p: isStandalonePage ? 5 : 3 }}><CircularProgress /></Box>;
+  if (!idToUse && !isStandalonePage && !profileId) { 
+      return <Alert severity="warning">No se ha proporcionado un ID de perfil para editar en modo modal.</Alert>;
   }
 
-  if (error && !isSaving) {
-     // Mostrar error adecuado según contexto
-     const errorContent = (
-         <Box sx={{ p: isStandalonePage ? 3 : 2 }}>
-             <Alert severity="error">{error}</Alert>
-             <Button
-                 variant="outlined"
-                 // Usar icono y función correctos
-                 startIcon={isStandalonePage ? <ArrowLeft /> : <X />}
-                 onClick={handleCancel}
-                 sx={{ mt: 2 }}
-             >
-                 {isStandalonePage ? 'Volver' : 'Cerrar'}
-             </Button>
-         </Box>
-     );
-     return isStandalonePage ? <Container>{errorContent}</Container> : errorContent;
-  }
+  const actualFormContent = (
+    <Box component="form" onSubmit={handleSubmit}>
+      <Accordion defaultExpanded sx={{ mb: 2.5, boxShadow: 'none', '&::before': { display: 'none' } }}>
+        <AccordionSummary expandIcon={<ChevronDown />} aria-controls="general-content" id="general-header">
+          <Typography variant="h6" sx={{ fontWeight: 500 }}>Datos Generales</Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ pt: 1, pb: 2 }}>
+          <Grid container spacing={3}>
+            {renderTextField('nombre_perfil', 'Nombre del Perfil', 'text', true, undefined, { md: 6 })}
+            {renderTextField('descripcion', 'Descripción', 'text', false, undefined, { md: 6 })}
+            <Grid item xs={12} sx={{pt: 1.5, display: 'flex', alignItems: 'center' }}>
+              <FormControlLabel
+                control={<Switch 
+                            checked={!!perfilData?.activo} 
+                            onChange={handleInputChange} 
+                            name="activo" 
+                            disabled={isSaving || (loading && !!idToUse)} 
+                         />}
+                label="Perfil Activo"
+              />
+            </Grid>
+          </Grid>
+        </AccordionDetails>
+      </Accordion>
+      
+      <Accordion sx={{ boxShadow: 'none', '&::before': { display: 'none' } }}>
+        <AccordionSummary expandIcon={<ChevronDown />} aria-controls="logistica-content" id="logistica-header">
+          <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>Logistica y seguro</Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ pt: 0, pb: 1 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={6} sm={4} md={3}>{renderTextField('costo_logistica_origen_eur', 'Costo Origen', 'number', false, 'EUR')}</Grid>
+            <Grid item xs={6} sm={4} md={3}>{renderTextField('flete_maritimo_usd', 'Flete Marítimo P.', 'number', false, 'USD')}</Grid>
+            <Grid item xs={6} sm={4} md={3}>{renderTextField('recargos_destino_usd', 'Recargos Destino', 'number', false, 'USD')}</Grid>
+            <Grid item xs={6} sm={4} md={3}>{renderTextField('tasa_seguro_pct', 'Tasa Seguro', 'number', false, '%')}</Grid>
+            <Grid item xs={6} sm={4} md={3}>{renderTextField('transporte_nacional_clp', 'Transp. Nacional', 'number', false, 'CLP')}</Grid>
+          </Grid>
+        </AccordionDetails>
+      </Accordion>
 
-  const formContent = (
-       <form onSubmit={handleSubmit}>
-          {/* --- Acordeón Datos Generales (expandido por defecto) --- */}
-          <Accordion defaultExpanded sx={{ boxShadow: 'none', '&::before': { display: 'none' } }}>
-             <AccordionSummary expandIcon={<ChevronDown />} aria-controls="general-content" id="general-header">
-                 <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>Datos Generales</Typography>
-             </AccordionSummary>
-             <AccordionDetails sx={{ pt: 0, pb: 1 }}>
-                 <Grid container spacing={2}>
-                     <Grid item xs={12} md={6}>{renderTextField('nombre_perfil', 'Nombre del Perfil', 'text', true)}</Grid>
-                     <Grid item xs={12} md={6}>{renderTextField('descripcion', 'Descripción', 'text')}</Grid>
-                     <Grid item xs={12}>
-                        <FormControlLabel
-                           control={<Switch checked={!!perfilData?.activo} onChange={handleInputChange} name="activo" disabled={isSaving || loading} />}
-                           label="Perfil Activo"
-                           sx={{ pl: 1 }} // Añadir padding para alinear
-                        />
-                     </Grid>
-                 </Grid>
-             </AccordionDetails>
-          </Accordion>
-          
-          {/* --- Acordeón Logistica y seguro --- */}
-          <Accordion sx={{ boxShadow: 'none', '&::before': { display: 'none' } }}>
-             <AccordionSummary expandIcon={<ChevronDown />} aria-controls="logistica-content" id="logistica-header">
-                 <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>Logistica y seguro</Typography>
-             </AccordionSummary>
-             <AccordionDetails sx={{ pt: 0, pb: 1 }}>
-                 <Grid container spacing={2}>
-                     <Grid item xs={6} sm={4} md={3}>{renderTextField('costo_logistica_origen_eur', 'Costo Origen', 'number', false, 'EUR')}</Grid>
-                     <Grid item xs={6} sm={4} md={3}>{renderTextField('flete_maritimo_usd', 'Flete Marítimo P.', 'number', false, 'USD')}</Grid>
-                     <Grid item xs={6} sm={4} md={3}>{renderTextField('recargos_destino_usd', 'Recargos Destino', 'number', false, 'USD')}</Grid>
-                     <Grid item xs={6} sm={4} md={3}>{renderTextField('tasa_seguro_pct', 'Tasa Seguro', 'number', false, '%')}</Grid>
-                     <Grid item xs={6} sm={4} md={3}>{renderTextField('transporte_nacional_clp', 'Transp. Nacional', 'number', false, 'CLP')}</Grid>
-                 </Grid>
-            </AccordionDetails>
-          </Accordion>
+      <Accordion sx={{ boxShadow: 'none', '&::before': { display: 'none' } }}>
+        <AccordionSummary expandIcon={<ChevronDown />} aria-controls="importacion-content" id="importacion-header">
+          <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>Costos de Importación</Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ pt: 0, pb: 1 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={6} sm={4} md={3}>{renderTextField('costo_agente_aduana_usd', 'Costo Ag. Aduana', 'number', false, 'USD')}</Grid>
+            <Grid item xs={6} sm={4} md={3}>{renderTextField('gastos_portuarios_otros_usd', 'Gastos Puerto/Otros', 'number', false, 'USD')}</Grid>
+            <Grid item xs={6} sm={4} md={3}>{renderTextField('derecho_advalorem_pct', 'Derecho AdValorem', 'number', false, '%')}</Grid>
+          </Grid>
+        </AccordionDetails>
+      </Accordion>
 
-           {/* --- Acordeón Costos de Importación --- */}
-           <Accordion sx={{ boxShadow: 'none', '&::before': { display: 'none' } }}>
-              <AccordionSummary expandIcon={<ChevronDown />} aria-controls="importacion-content" id="importacion-header">
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>Costos de Importación</Typography>
-              </AccordionSummary>
-              <AccordionDetails sx={{ pt: 0, pb: 1 }}>
-                  <Grid container spacing={2}>
-                      <Grid item xs={6} sm={4} md={3}>{renderTextField('costo_agente_aduana_usd', 'Costo Ag. Aduana', 'number', false, 'USD')}</Grid>
-                      <Grid item xs={6} sm={4} md={3}>{renderTextField('gastos_portuarios_otros_usd', 'Gastos Puerto/Otros', 'number', false, 'USD')}</Grid>
-                      <Grid item xs={6} sm={4} md={3}>{renderTextField('derecho_advalorem_pct', 'Derecho AdValorem', 'number', false, '%')}</Grid>
-                  </Grid>
-             </AccordionDetails>
-           </Accordion>
+      <Accordion sx={{ boxShadow: 'none', '&::before': { display: 'none' } }}>
+        <AccordionSummary expandIcon={<ChevronDown />} aria-controls="conversion-content" id="conversion-header">
+          <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>Conversión a CLP y Margen</Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ pt: 0, pb: 1 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={6} sm={4} md={3}>{renderTextField('margen_adicional_pct', '% Adicional Total', 'number', false, '%')}</Grid>
+            <Grid item xs={6} sm={4} md={3}>{renderTextField('buffer_usd_clp_pct', 'Buffer USD/CLP', 'number', false, '%')}</Grid>
+            <Grid item xs={6} sm={4} md={3}>{renderTextField('buffer_eur_usd_pct', 'Buffer EUR/USD', 'number', false, '%')}</Grid>
+            <Grid item xs={6} sm={4} md={3}>{renderTextField('iva_pct', 'IVA', 'number', false, '%')}</Grid>
+          </Grid>
+        </AccordionDetails>
+      </Accordion>
+      
+      <Accordion sx={{ boxShadow: 'none', '&::before': { display: 'none' } }}>
+        <AccordionSummary expandIcon={<ChevronDown />} aria-controls="cliente-content" id="cliente-header">
+          <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>Precios para Cliente</Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ pt: 0, pb: 1 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={6} sm={4} md={3}>{renderTextField('descuento_fabrica_pct', 'Desc. Fábrica', 'number', false, '%')}</Grid>
+            <Grid item xs={6} sm={4} md={3}>{renderTextField('descuento_cliente_pct', 'Desc. Cliente', 'number', false, '%')}</Grid>
+          </Grid>
+        </AccordionDetails>
+      </Accordion>
 
-           {/* --- Acordeón Conversión a CLP y Margen --- */}
-           <Accordion sx={{ boxShadow: 'none', '&::before': { display: 'none' } }}>
-              <AccordionSummary expandIcon={<ChevronDown />} aria-controls="conversion-content" id="conversion-header">
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>Conversión a CLP y Margen</Typography>
-              </AccordionSummary>
-              <AccordionDetails sx={{ pt: 0, pb: 1 }}>
-                  <Grid container spacing={2}>
-                      <Grid item xs={6} sm={4} md={3}>{renderTextField('margen_adicional_pct', '% Adicional Total', 'number', false, '%')}</Grid>
-                      <Grid item xs={6} sm={4} md={3}>{renderTextField('buffer_usd_clp_pct', 'Buffer USD/CLP', 'number', false, '%')}</Grid>
-                      <Grid item xs={6} sm={4} md={3}>{renderTextField('buffer_eur_usd_pct', 'Buffer EUR/USD', 'number', false, '%')}</Grid>
-                      <Grid item xs={6} sm={4} md={3}>{renderTextField('iva_pct', 'IVA', 'number', false, '%')}</Grid>
-                  </Grid>
-              </AccordionDetails>
-            </Accordion>
-            
-            {/* --- Acordeón Precios para Cliente --- */}
-            <Accordion sx={{ boxShadow: 'none', '&::before': { display: 'none' } }}>
-               <AccordionSummary expandIcon={<ChevronDown />} aria-controls="cliente-content" id="cliente-header">
-                   <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>Precios para Cliente</Typography>
-               </AccordionSummary>
-               <AccordionDetails sx={{ pt: 0, pb: 1 }}>
-                   <Grid container spacing={2}>
-                       <Grid item xs={6} sm={4} md={3}>{renderTextField('descuento_fabrica_pct', 'Desc. Fábrica', 'number', false, '%')}</Grid>
-                       <Grid item xs={6} sm={4} md={3}>{renderTextField('descuento_cliente_pct', 'Desc. Cliente', 'number', false, '%')}</Grid>
-                   </Grid>
-               </AccordionDetails>
-             </Accordion>
-
-           {/* --- Botones de Acción (fuera de los acordeones) --- */}
-           <Grid container sx={{ mt: 3, px: 2 }} justifyContent="space-between">
-             <Button
-               variant="outlined"
-               color="secondary"
-               startIcon={<X />}
-               onClick={handleCancel}
-               disabled={isSaving}
-             >
-               Cancelar
-             </Button>
-             <Button
-               type="submit"
-               variant="contained"
-               color="primary"
-               startIcon={isSaving ? <CircularProgress size={20} color="inherit" /> : <Save />}
-               disabled={isSaving || loading}
-             >
-               {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-             </Button>
-           </Grid>
-       </form>
+      <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+        {(isStandalonePage || onCancel) && (
+          <Button variant="outlined" onClick={handleCancel} startIcon={<X />} disabled={isSaving}>
+            Cancelar
+          </Button>
+        )}
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          startIcon={<Save />}
+          disabled={isSaving || (loading && !idToUse && !perfilData?.nombre_perfil) || (loading && !!idToUse) }
+        >
+          {isSaving ? 'Guardando...' : (idToUse ? 'Guardar Cambios' : 'Crear Perfil')}
+        </Button>
+      </Box>
+    </Box>
   );
 
+  if (isStandalonePage) {
+    return (
+      <Container maxWidth="md" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+        <Paper elevation={2} sx={{ p: { xs: 2, sm: 3, md: 4 }, borderRadius: '12px' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 3, md: 4 } }}>
+            <IconButton onClick={handleCancel} sx={{ mr: 1.5, color: 'action.active' }} aria-label="Volver">
+              <ArrowLeft />
+            </IconButton>
+            <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
+              {idToUse ? 'Editar Perfil' : 'Crear Nuevo Perfil'}
+            </Typography>
+          </Box>
+
+          {loading && idToUse ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 5 }}>
+                <CircularProgress sx={{ mb: 2 }} />
+                <Typography color="text.secondary">Cargando datos del perfil...</Typography>
+            </Box>
+          ) : error && !isSaving ? (
+            <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+          ) : (
+            actualFormContent 
+          )}
+          
+        </Paper>
+        <Snackbar 
+            open={snackbarOpen} 
+            autoHideDuration={4000} 
+            onClose={handleCloseSnackbar} 
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+            <Alert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
+                {snackbarMessage}
+            </Alert>
+        </Snackbar>
+      </Container>
+    );
+  }
+
   return (
-    // Renderizar con o sin Container/Paper según el contexto
-    <> 
-      {isStandalonePage ? (
-        <Container component={Paper} sx={{ p: 4, mt: 4 }}>
-          <Typography variant="h4" gutterBottom>Editar Perfil de Costo</Typography>
-          <Typography variant="subtitle1" gutterBottom color="textSecondary">ID: {idToUse}</Typography>
-          <Divider sx={{ my: 2 }} />
-          {formContent}
-          {/* Mostrar error de guardado aquí si es página */} 
-          {error && isSaving && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-        </Container>
-      ) : (
-        <Box>
-            {/* El título y ID suelen estar en el Dialog/Modal padre */} 
-            {formContent}
-            {/* Mostrar error de guardado aquí si es modal */} 
-            {error && isSaving && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-        </Box>
-      )}
-      {/* Snackbar para notificaciones */}
-      <Snackbar
-          open={snackbarOpen}
-          autoHideDuration={4000} // Duración en ms
-          onClose={handleCloseSnackbar}
-          message={snackbarMessage}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} // Posición
-      />
-    </>
+    <Box sx={{ p: onCancel ? {xs: 1, sm:1.5} : 0 }}>
+        {loading && !!idToUse && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 3 }}>
+              <CircularProgress sx={{ mb: 1 }}/>
+              <Typography variant="body2" color="text.secondary">Cargando...</Typography>
+            </Box>
+        )}
+        {error && !isSaving && (
+             <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+        )}
+        {(!loading || !idToUse) && !error && actualFormContent}
+        {onSaveSuccess && (<Snackbar open={snackbarOpen} autoHideDuration={1500} onClose={handleCloseSnackbar} message={snackbarMessage} />)}
+    </Box>
   );
 };
 

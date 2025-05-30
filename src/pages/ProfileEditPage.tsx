@@ -1,49 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { User, Mail, Key, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Key, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import type { ProfileOutletContextType } from '../App'; // Importar el tipo del contexto
-
-// --- Estilos para el modo ventana/modal ---
-// Overlay que cubre toda la pantalla y centra el contenido
-const modalOverlayStyle = "fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-75 p-4 md:p-8 font-sans";
-
-// Contenedor de la "ventana" o "modal"
-const modalWindowStyle = "max-w-2xl w-full bg-white rounded-2xl shadow-2xl p-6 md:p-10 lg:p-12 border border-gray-300 transform transition-all"; // Añadido transform para futuras animaciones
-
-// Título dentro de la ventana
-const modalHeaderSectionStyle = "mb-6 md:mb-8";
-const modalTitleStyle = "text-2xl md:text-3xl font-bold text-gray-800 text-center mb-1"; // Ajustado tamaño y color
-const modalSubtitleStyle = "text-sm text-gray-500 text-center mb-6"; // Subtítulo opcional
-
-// Estilos de Alerta (pueden ser los mismos)
-const errorAlertStyle = "mb-5 p-3.5 bg-red-100 border border-red-300 text-red-700 rounded-lg text-sm";
-const successAlertStyle = "mb-5 p-3.5 bg-green-100 border border-green-300 text-green-700 rounded-lg text-sm";
-
-// Espaciado y etiquetas del formulario (pueden ser los mismos)
-const formElementSpacing = "space-y-5 md:space-y-6"; 
-const labelStyle = "block text-sm font-medium text-gray-600 mb-1.5";
-const inputGroupStyle = "relative"; 
-
-// Inputs (pueden ser los mismos, quizás ajustar un poco el foco o borde para el tema modal)
-const inputStyle = "block w-full py-3 pl-10 pr-3 text-base text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 transition";
-const iconStyle = "absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400"; 
-const passwordToggleStyle = "absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 cursor-pointer hover:text-blue-600";
-
-// Divisor (puede ser el mismo)
-const hrStyle = "my-6 md:my-8 border-gray-200";
-// Título de la sección de contraseña (puede ser el mismo, o ajustarlo)
-const passwordSectionTitleStyle = "text-md font-semibold text-gray-700 mb-4"; // Ligeramente ajustado
-
-// Grupo de botones (puede ser el mismo, o ajustarlo para el pie del modal)
-const buttonGroupStyle = "flex items-center justify-end space-x-3 pt-5 mt-6 border-t border-gray-200"; 
-
-// Botones con estilos más acordes a un modal (ejemplo)
-const cancelButtonStyle = "px-6 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition";
-const saveButtonStyle = "px-6 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition shadow-sm";
+import {
+  Container,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Paper,
+  IconButton,
+  InputAdornment,
+  Alert,
+  Grid,
+  Divider,
+} from '@mui/material';
 
 const ProfileEditPage: React.FC = () => {
   const navigate = useNavigate();
-  // Usar useOutletContext para obtener los datos y la función de App.tsx
   const { userProfile: currentUser, handleProfileUpdate } = useOutletContext<ProfileOutletContextType>();
 
   const [username, setUsername] = useState(currentUser.username);
@@ -58,144 +32,254 @@ const ProfileEditPage: React.FC = () => {
 
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  // Actualizar campos si currentUser cambia (ej. si el usuario navega y vuelve, o por simulación)
   useEffect(() => {
     setUsername(currentUser.username);
     setEmail(currentUser.email);
   }, [currentUser]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setError(null);
     setSuccessMessage(null);
+    setIsSaving(true);
 
     if (!username.trim() || !email.trim()) {
       setError('El nombre de usuario y el correo electrónico no pueden estar vacíos.');
+      setIsSaving(false);
       return;
     }
     if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
       setError('El formato del correo electrónico no es válido.');
+      setIsSaving(false);
       return;
     }
 
+    let passwordsProvided = false;
     if (newPassword || currentPassword || confirmNewPassword) {
+      passwordsProvided = true;
       if (!currentPassword) {
         setError('Por favor, introduce tu contraseña actual para cambiarla.');
+        setIsSaving(false);
         return;
       }
-      // Aquí iría una validación REAL de la contraseña actual contra el backend
-      // if (currentPassword !== 'contraseña_real_actual_del_backend') { setError('La contraseña actual es incorrecta.'); return; }
-      
       if (newPassword.length > 0 && newPassword.length < 6) {
          setError('La nueva contraseña debe tener al menos 6 caracteres.');
+         setIsSaving(false);
          return;
       }
       if (newPassword !== confirmNewPassword) {
         setError('Las nuevas contraseñas no coinciden.');
+        setIsSaving(false);
         return;
       }
-      // Si se cambia la contraseña, también se debería enviar la nueva contraseña a handleProfileUpdate
-      // Por ahora, onProfileUpdate solo toma username y email.
-      // Se necesitaría modificar handleProfileUpdate en App.tsx y este llamado si se quiere manejar cambio de contraseña.
     }
     
-    handleProfileUpdate(username, email);
-    // El navigate ya está en handleProfileUpdate en App.tsx, pero podríamos mostrar un mensaje aquí antes de eso
-    setSuccessMessage('¡Perfil actualizado con éxito! Redirigiendo...');
-    // No necesitamos el setTimeout para navegar, ya que App.tsx lo hará después de actualizar el estado.
+    try {
+      if (passwordsProvided) {
+        await handleProfileUpdate(username, email, currentPassword, newPassword);
+      } else {
+        await handleProfileUpdate(username, email);
+      }
+      setSuccessMessage('¡Perfil actualizado con éxito!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+
+      // Redirigir a /equipos después de un breve retraso para que el usuario vea el mensaje
+      setTimeout(() => {
+        navigate('/equipos');
+      }, 1500); // 1.5 segundos de retraso
+
+    } catch (apiError: any) {
+      console.error("Error al actualizar el perfil:", apiError);
+      setError(apiError.message || "Ocurrió un error al actualizar el perfil.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
-    navigate(-1); // Navegar a la página anterior
+    navigate(-1); 
   };
-
-  // Las constantes de estilo se definen arriba para mayor claridad.
   
   return (
-    <div className={modalOverlayStyle}> {/* Usar el nuevo estilo de overlay */}
-      {/* Contenedor de la ventana principal */}
-      <div className={modalWindowStyle}> {/* Usar el nuevo estilo de ventana */}
-        <header className={modalHeaderSectionStyle}>
-          <h1 className={modalTitleStyle}>Editar Perfil</h1>
-          {/* <p className={modalSubtitleStyle}>Actualiza tu información personal y contraseña.</p> */}
-        </header>
+    <Container maxWidth="md" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3, md: 4 }, borderRadius: '12px', backgroundColor: 'transparent' }}> {/* Quitamos el fondo del Paper o lo hacemos transparente */}
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 3, md: 4 } }}>
+          <IconButton onClick={handleCancel} sx={{ mr: 1.5 }} aria-label="Volver">
+            <ArrowLeft />
+          </IconButton>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
+            Editar Perfil
+          </Typography>
+        </Box>
 
         {error && (
-          <div className={errorAlertStyle}>
+          <Alert severity="error" sx={{ mb: 3 }}>
             {error}
-          </div>
+          </Alert>
         )}
         {successMessage && (
-          <div className={successAlertStyle}>
+          <Alert severity="success" sx={{ mb: 3 }}>
             {successMessage}
-          </div>
+          </Alert>
         )}
 
-        <form onSubmit={(e) => {e.preventDefault(); handleSave();}} className={formElementSpacing}>
-          <div>
-            <label htmlFor="username" className={labelStyle}>Nombre de Usuario</label>
-            <div className={inputGroupStyle}>
-                <User className={iconStyle}/>
-                <input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} className={inputStyle} placeholder="Tu nombre de usuario"/>
-            </div>
-          </div>
+        <Box component="form" onSubmit={(e) => { e.preventDefault(); handleSave(); }} noValidate>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 500 }}>
+                Información de la Cuenta
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                id="username"
+                label="Nombre de Usuario"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                variant="outlined"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <User size={20} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                id="email"
+                label="Correo Electrónico"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                variant="outlined"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Mail size={20} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
 
-          <div>
-            <label htmlFor="email" className={labelStyle}>Correo Electrónico</label>
-             <div className={inputGroupStyle}>
-                <Mail className={iconStyle}/>
-                <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputStyle} placeholder="tu@correo.com"/>
-            </div>
-          </div>
-          
-          <hr className={hrStyle}/>
-          <p className={passwordSectionTitleStyle}>Cambiar Contraseña (opcional)</p>
+            <Grid item xs={12}>
+              <Divider sx={{ my: 3 }} />
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 500 }}>
+                Cambiar Contraseña (opcional)
+              </Typography>
+            </Grid>
 
-          <div>
-            <label htmlFor="currentPassword" className={labelStyle}>Contraseña Actual</label>
-            <div className={inputGroupStyle}>
-                <Key className={iconStyle}/>
-                <input type={showCurrentPassword ? "text" : "password"} id="currentPassword" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className={inputStyle} placeholder="Contraseña actual"/>
-                {showCurrentPassword ? <EyeOff className={passwordToggleStyle} onClick={() => setShowCurrentPassword(false)}/> : <Eye className={passwordToggleStyle} onClick={() => setShowCurrentPassword(true)}/>}
-            </div>
-          </div>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                id="currentPassword"
+                label="Contraseña Actual"
+                type={showCurrentPassword ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                variant="outlined"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Key size={20} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle current password visibility"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        edge="end"
+                      >
+                        {showCurrentPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                id="newPassword"
+                label="Nueva Contraseña"
+                type={showNewPassword ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                helperText="Mínimo 6 caracteres"
+                variant="outlined"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Key size={20} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle new password visibility"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        edge="end"
+                      >
+                        {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                id="confirmNewPassword"
+                label="Confirmar Nueva Contraseña"
+                type={showConfirmNewPassword ? 'text' : 'password'}
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                variant="outlined"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Key size={20} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle confirm new password visibility"
+                        onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                        edge="end"
+                      >
+                        {showConfirmNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
 
-          <div>
-            <label htmlFor="newPassword" className={labelStyle}>Nueva Contraseña</label>
-             <div className={inputGroupStyle}>
-                <Key className={iconStyle}/>
-                <input type={showNewPassword ? "text" : "password"} id="newPassword" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={inputStyle} placeholder="Nueva contraseña (mín. 6 car.)"/>
-                 {showNewPassword ? <EyeOff className={passwordToggleStyle} onClick={() => setShowNewPassword(false)}/> : <Eye className={passwordToggleStyle} onClick={() => setShowNewPassword(true)}/>}
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="confirmNewPassword" className={labelStyle}>Confirmar Nueva Contraseña</label>
-            <div className={inputGroupStyle}>
-                <Key className={iconStyle}/>
-                <input type={showConfirmNewPassword ? "text" : "password"} id="confirmNewPassword" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} className={inputStyle} placeholder="Confirma la nueva contraseña"/>
-                {showConfirmNewPassword ? <EyeOff className={passwordToggleStyle} onClick={() => setShowConfirmNewPassword(false)}/> : <Eye className={passwordToggleStyle} onClick={() => setShowConfirmNewPassword(true)}/>}
-            </div>
-          </div>
-
-          <div className={buttonGroupStyle}>
-            <button 
-              type="button" 
-              onClick={handleCancel} 
-              className={cancelButtonStyle}
-            >
+            <Grid item xs={12}>
+              <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                <Button variant="outlined" onClick={handleCancel} disabled={isSaving}>
               Cancelar
-            </button>
-            <button 
-              type="submit"
-              className={saveButtonStyle}
-            >
-              Guardar Cambios
-            </button>
-          </div>
-        </form>
-      </div> {/* Fin de modalWindowStyle */}
-    </div>
+                </Button>
+                <Button type="submit" variant="contained" color="primary" disabled={isSaving}>
+                  {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 

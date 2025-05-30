@@ -8,7 +8,6 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { theme } from './theme'; // <-- Importación nombrada
 import ChatWidget, { ChatWidgetHandle } from './components/ChatWidget'; // <-- Importar ChatWidgetHandle
 import PerfilesPanel from './pages/PerfilesPanel'; // <-- A PerfilesPanel (default import)
-import ProfileEditModal from './components/ProfileEditModal'; // <-- IMPORTAR EL NUEVO MODAL
 
 // --- Constants ---
 // const sidebarWidth = 220; // Define sidebar width here - Reemplazada por SIDEBAR_WIDTH
@@ -196,7 +195,7 @@ const Header: React.FC<HeaderProps> = ({ logoPath, sidebarWidth, headerHeight, u
 
 export interface ProfileOutletContextType {
     userProfile: { username: string; email: string; };
-    handleProfileUpdate: (newUsername: string, newEmail: string) => void;
+    handleProfileUpdate: (newUsername: string, newEmail: string, currentPassword?: string, newPassword?: string) => Promise<void>;
 }
 
 // Versión funcional con diseño simplificado
@@ -230,10 +229,34 @@ export default function App() {
     setCurrentMockProfileIndex(nextIndex);
   };
 
-  const handleProfileUpdate = (newUsername: string, newEmail: string) => {
+  const handleProfileUpdate = async (newUsername: string, newEmail: string, currentPassword?: string, newPassword?: string): Promise<void> => {
+    // Simulación de la lógica de actualización del perfil, incluyendo contraseña
+    console.log("Intentando actualizar perfil con:", { newUsername, newEmail, currentPassword, newPassword });
+
+    if (newPassword && !currentPassword) {
+      console.error("Se proporcionó nueva contraseña pero no la actual.");
+      // En una app real, esto se validaría en el frontend antes de llamar aquí,
+      // pero es bueno tener una guarda.
+      throw new Error("Para cambiar la contraseña, se requiere la contraseña actual.");
+    }
+
+    if (newPassword && currentPassword) {
+      // Aquí iría la llamada a la API para cambiar la contraseña y el perfil
+      // Ejemplo: const response = await api.updateUserProfile({ username: newUsername, email: newEmail, currentPassword, newPassword });
+      // if (!response.success) throw new Error(response.message || "Error al actualizar contraseña");
+      console.log("SIMULACIÓN: Contraseña actual proporcionada, se procedería a verificar y cambiar.");
+      // Simular éxito de cambio de contraseña
+      console.log("SIMULACIÓN: Contraseña cambiada con éxito (si la actual fuera correcta).");
+    }
+
+    // Actualizar nombre de usuario y email localmente
     setUserProfile({ username: newUsername, email: newEmail });
-    console.log("Perfil actualizado desde página a:", { newUsername, newEmail });
-    navigate('/'); // Navegar a la página de inicio después de actualizar
+    console.log("Perfil (nombre/email) actualizado localmente a:", { newUsername, newEmail });
+    
+    // Considerar si la navegación debe ocurrir aquí o ser manejada por la página que llama
+    // navigate('/'); // Navegar a la página de inicio después de actualizar
+    // Devolver una promesa resuelta para indicar éxito
+    return Promise.resolve();
   };
 
   const handleNavigateToProfileEdit = () => {
