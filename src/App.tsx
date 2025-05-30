@@ -8,6 +8,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { theme } from './theme'; // <-- Importación nombrada
 import ChatWidget, { ChatWidgetHandle } from './components/ChatWidget'; // <-- Importar ChatWidgetHandle
 import PerfilesPanel from './pages/PerfilesPanel'; // <-- A PerfilesPanel (default import)
+import ProfileEditModal from './components/ProfileEditModal'; // <-- IMPORTAR EL NUEVO MODAL
 
 // --- Constants ---
 // const sidebarWidth = 220; // Define sidebar width here - Reemplazada por SIDEBAR_WIDTH
@@ -70,12 +71,13 @@ type LinkStyle = React.CSSProperties;
 // --- New Header Component ---
 interface HeaderProps {
   logoPath: string;
-  sidebarWidth: number; // Add sidebarWidth prop
-  headerHeight: number; // Add headerHeight prop
+  sidebarWidth: number;
+  headerHeight: number;
+  onProfileClick: () => void; // Nueva prop para manejar el click en el perfil
 }
 
-const Header: React.FC<HeaderProps> = ({ logoPath, sidebarWidth, headerHeight }) => {
-  const navigate = useNavigate(); // Hook para navegación
+const Header: React.FC<HeaderProps> = ({ logoPath, sidebarWidth, headerHeight, onProfileClick }) => {
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated');
@@ -83,21 +85,20 @@ const Header: React.FC<HeaderProps> = ({ logoPath, sidebarWidth, headerHeight })
   };
 
   const headerStyle: React.CSSProperties = {
-    backgroundColor: '#ffffff', // Changed to white
+    backgroundColor: '#ffffff',
     padding: '12px 24px',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between', // Keeps logo left, icons right
-    color: '#334155', // Default text color for header (if any text added later)
-    height: `${headerHeight}px`, // Usa la constante de altura
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)', // Slightly softer shadow for white bg
-    borderBottom: '1px solid #e5e7eb', // Add subtle border like sidebar
-    flexShrink: 0, // Evita que la cabecera se encoja
+    justifyContent: 'space-between',
+    color: '#334155',
+    height: `${headerHeight}px`,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    borderBottom: '1px solid #e5e7eb',
+    flexShrink: 0,
   };
 
-  // Style for the container that centers the logo relative to sidebar
   const logoContainerStyle: React.CSSProperties = {
-    width: `${sidebarWidth}px`, // Match sidebar width
+    width: `${sidebarWidth}px`,
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
@@ -106,63 +107,72 @@ const Header: React.FC<HeaderProps> = ({ logoPath, sidebarWidth, headerHeight })
   const logoStyle: React.CSSProperties = {
     height: '40px', 
     width: 'auto',
-    display: 'block', // Ensure image behaves like a block
+    display: 'block',
   };
 
   const rightSectionStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: '24px', // Increased gap slightly for more space
+    gap: '24px',
   };
 
   const iconStyle: React.CSSProperties = {
     cursor: 'pointer',
-    color: '#64748b', // Changed icon color to medium gray
-    flexShrink: 0, // Prevent icons from shrinking
+    color: '#64748b',
+    flexShrink: 0,
   };
 
-  // New styles for user info
   const userInfoContainerStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
+    cursor: 'pointer', // Hacerlo clickeable
+    padding: '8px', // Añadir padding para mejor área de click
+    borderRadius: '6px', // Bordes redondeados
   };
+  
+  // Estilo para hover, podría estar en un :hover de CSS o manejado con estado si es más complejo
+  // Por ahora, lo menciono, pero para simplicidad lo omito en los estilos inline directos
+  // const userInfoContainerHoverStyle: React.CSSProperties = {
+  //   backgroundColor: '#f3f4f6', // Un gris claro para el hover
+  // };
+
   const userInfoTextStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     fontSize: '13px',
-    lineHeight: '1.4', // Adjusted line height
-    color: '#334155', // Use default dark gray
-    textAlign: 'right', // Align text to the right
+    lineHeight: '1.4',
+    color: '#334155',
+    textAlign: 'right',
   };
   const userNameStyle: React.CSSProperties = {
     fontWeight: 500,
   };
   const userEmailStyle: React.CSSProperties = {
     fontSize: '11px',
-    color: '#64748b', // Medium gray for email
+    color: '#64748b',
   };
 
   return (
     <header style={headerStyle}>
-      {/* Wrap logo in a container sized to the sidebar */}
       <div style={logoContainerStyle}>
         <img src={logoPath} alt="Logo" style={logoStyle} />
       </div>
-      {/* Right side icons */} 
       <div style={rightSectionStyle}>
-        <Bell size={20} style={iconStyle} />
-        {/* User Info Block */}
-        <div style={userInfoContainerStyle}>
-           {/* Text Section */} 
+        {/* <Bell size={20} style={iconStyle} /> YA NO ESTA LA CAMPANA */}
+        {/* User Info Block - ahora clickeable */}
+        <div 
+          style={userInfoContainerStyle} 
+          onClick={onProfileClick} 
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'} // Efecto hover simple
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'} // Restaurar al salir
+        >
            <div style={userInfoTextStyle}>
              <span style={userNameStyle}>ADMIN</span>
              <span style={userEmailStyle}>Ecoalliance33@gmail.com</span>
            </div>
-           {/* Icon */} 
-           <User size={24} style={{...iconStyle, color: '#4b5563'}} /> {/* Slightly larger user icon? */}
+           <User size={24} style={{...iconStyle, color: '#4b5563', cursor: 'default'}} /> {/* cursor default aquí porque el div padre es el clickeable */}
         </div>
-        {/* Botón/Icono de Cerrar Sesión envuelto para tooltip */}
         <span title="Cerrar Sesión" onClick={handleLogout} style={{ cursor: 'pointer' }}>
           <LogOut size={20} style={iconStyle} />
         </span>
@@ -175,21 +185,22 @@ const Header: React.FC<HeaderProps> = ({ logoPath, sidebarWidth, headerHeight })
 // Versión funcional con diseño simplificado
 export default function App() {
   const location = useLocation();
-  const navigate = useNavigate(); // Hook para navegación
-  const chatWidgetRef = useRef<ChatWidgetHandle>(null); // Ref para el ChatWidget
+  const navigate = useNavigate();
+  const chatWidgetRef = useRef<ChatWidgetHandle>(null);
   
-  // State for Admin Submenu
   const [isAdminOpen, setIsAdminOpen] = useState(location.pathname.startsWith('/admin'));
-
-  // Estado para mostrar el link de Costos, inicializado leyendo sessionStorage
   const [showCostosLink, setShowCostosLink] = useState(() => {
-    try {
-      return sessionStorage.getItem('showCostosLink') === 'true';
-    } catch (e) {
-      console.error('Error leyendo sessionStorage al inicializar:', e);
-      return false;
-    }
+    try { return sessionStorage.getItem('showCostosLink') === 'true'; } 
+    catch (e) { console.error('Error leyendo sessionStorage:', e); return false; }
   });
+
+  // Estado para el modal de perfil
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // Función para abrir/cerrar el modal de perfil
+  const toggleProfileModal = () => {
+    setIsProfileModalOpen(!isProfileModalOpen);
+  };
 
   // --- Autenticación Effect ---
   useEffect(() => {
@@ -295,18 +306,19 @@ export default function App() {
   // Función para obtener el estilo del enlace dinámicamente
   const getLinkStyle = (path: string, isSubItem: boolean = false): LinkStyle => {
     const isActive = location.pathname === path || (path !== '/' && location.pathname.startsWith(path) && !isSubItem) || (isSubItem && location.pathname === path) ;
+    const isAdminActive = path === '/admin' && location.pathname.startsWith('/admin');
     return {
       display: 'flex',
       alignItems: 'center',
-      padding: `10px ${isSubItem ? '30px' : '20px'}`,
+      padding: isSubItem ? '10px 10px 10px 40px' : '10px 20px',
+      marginBottom: '4px',
+      borderRadius: '6px',
       textDecoration: 'none',
-      color: isActive ? theme.palette.primary.main : '#4B5563', // Color primario si activo, gris oscuro si no
-      backgroundColor: isActive ? '#E3F2FD' : 'transparent', // Fondo azul claro si activo
-      borderLeft: isActive ? `3px solid ${theme.palette.primary.main}` : '3px solid transparent',
-      paddingLeft: isActive ? (isSubItem ? '27px' : '17px') : (isSubItem ? '30px' : '20px'),
-      marginBottom: '4px', // Pequeño espacio entre ítems
-      borderRadius: '0 4px 4px 0', // Bordes redondeados a la derecha
-      transition: 'background-color 0.2s ease, color 0.2s ease',
+      color: (isActive || isAdminActive) ? '#0ea5e9' : '#4b5563', // Azul cielo si activo, gris oscuro si no
+      backgroundColor: (isActive || isAdminActive) ? '#e0f2fe' : 'transparent', // Fondo azul claro si activo
+      fontWeight: (isActive || isAdminActive) ? 600 : 400, // Más grueso si activo
+      transition: 'all 0.2s ease-in-out',
+      fontSize: isSubItem ? '13px': '14px',
     };
   };
 
@@ -320,8 +332,7 @@ export default function App() {
   // Ejemplo de función que SÍ pertenece a App.tsx (manejo del chat)
   const handleOpenChatClick = () => {
     console.log('[App] Botón flotante clickeado -> Abrir Chat');
-    // chatWidgetRef.current?.openChat(); // Desactivar la apertura del chat
-    alert('Próximamente'); // Mostrar mensaje
+    alert('Próximamente'); 
   };
   
   // useEffect para manejar la tecla ESC para modales GLOBALES si los hubiera,
@@ -340,104 +351,127 @@ export default function App() {
     };
   }, [/* dependencias de modales globales si las hay */]);
 
+  if (location.pathname === '/login') {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Outlet />
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-        <Header logoPath={ecoAllianceLogo} sidebarWidth={SIDEBAR_WIDTH} headerHeight={HEADER_HEIGHT} />
-        <div style={{ display: 'flex', flexGrow: 1, overflow: 'hidden' /* Evita scroll doble */ }}>
-          <div style={sidebarStyle}>
-            <nav style={{ flexGrow: 1, padding: '0 15px' /* Padding interno para enlaces */ }}>
-              {/* Logo dentro de la barra lateral - Opcional, ya está en header */}
-              {/* 
-              <div style={logoContainerStyle}>
-                <img src={ecoAllianceLogo} alt="Logo" style={logoImageStyle} />
-              </div> 
-              */}
-              <Link to="/dashboard" style={{
-                 ...getLinkStyle('/dashboard'),
-                 color: '#A0AEC0', // Tailwind gray-400
-                 textDecoration: 'line-through',
-              }}
-              onClick={(e) => {
-                e.preventDefault(); // Prevent default navigation
-                alert('Próximamente'); // Show message
-              }}
-              >
-                 <div style={navLinkTextStyle}> 
-                   <LayoutDashboard size={18} style={navIconStyle} />
-                   DASHBOARD
-                 </div>
-              </Link>
-              <Link to="/equipos" style={getLinkStyle('/equipos')}>
-                 <div style={navLinkTextStyle}> 
-                   <SlidersHorizontal size={18} style={navIconStyle} /> 
-                   EQUIPOS
-                 </div>
-              </Link>
-              <Link to="/historial" style={getLinkStyle('/historial')}>
-                 <div style={navLinkTextStyle}> 
-                   <History size={18} style={navIconStyle} /> 
-                   HISTORIAL
-                 </div>
-              </Link>
-              <Link 
-                to="/admin/perfiles"
-                style={getLinkStyle('/admin')} 
-                onClick={toggleAdminMenu}
-              >
-                <div style={navLinkTextStyle}> 
-                   <FileCog size={18} style={navIconStyle} />
-                   ADMIN
-                </div>
-                {isAdminOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </Link>
-              
-              {isAdminOpen && (
-                <>
-                  {/* --- Enlace Costos Condicional (Comentado para ocultarlo permanentemente por ahora) --- */} 
-                  {/* {showCostosLink && (
-                      <Link 
-                        to="/admin/costos" 
-                        style={getLinkStyle('/admin/costos', true)} 
-                      >
-                         <div style={navLinkTextStyle}> 
-                            <SlidersHorizontal size={16} style={{...navIconStyle, marginRight: '8px'}} /> 
-                            Costos
-                         </div>
-                      </Link>
-                  )} */}
-                  {/* Enlace Perfiles (se mantiene igual) */} 
-                  <Link 
-                    to="/admin/perfiles" 
-                    style={getLinkStyle('/admin/perfiles', true)} 
-                  >
-                     <div style={navLinkTextStyle}> 
-                        <Users size={16} style={{...navIconStyle, marginRight: '8px'}} /> 
-                        Perfiles
-                     </div>
-                  </Link>
-                  {/* Enlace Cargar Equipos (se mantiene igual) */} 
-                  <Link 
-                    to="/admin/carga-equipos" 
-                    style={getLinkStyle('/admin/carga-equipos', true)} 
-                  >
-                     <div style={navLinkTextStyle}> 
-                        <UploadCloud size={16} style={{...navIconStyle, marginRight: '8px'}} /> 
-                        Cargar Equipos
-                     </div>
-                  </Link>
-                </>
-              )}
-            </nav>
+      <>
+        {/* Contenedor principal de la aplicación visible */}
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+          <Header 
+            logoPath={ecoAllianceLogo} 
+            sidebarWidth={SIDEBAR_WIDTH} 
+            headerHeight={HEADER_HEIGHT} 
+            onProfileClick={toggleProfileModal}
+          />
+          <div style={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
+            <div style={sidebarStyle}>
+              <nav style={{ flexGrow: 1, padding: '0 15px' }}>
+                {/* Logo dentro de la barra lateral - Opcional, ya está en header */}
+                {/* 
+                <div style={logoContainerStyle}>
+                  <img src={ecoAllianceLogo} alt="Logo" style={logoImageStyle} />
+                </div> 
+                */}
+                <Link to="/dashboard" style={{
+                   ...getLinkStyle('/dashboard'),
+                   color: '#A0AEC0', 
+                   textDecoration: 'line-through',
+                }}
+                onClick={(e) => {
+                  e.preventDefault(); 
+                  alert('Próximamente');
+                }}
+                >
+                   <div style={navLinkTextStyle}> 
+                     <LayoutDashboard size={18} style={navIconStyle} />
+                     DASHBOARD
+                   </div>
+                </Link>
+                <Link to="/equipos" style={getLinkStyle('/equipos')}>
+                   <div style={navLinkTextStyle}> 
+                     <SlidersHorizontal size={18} style={navIconStyle} /> 
+                     EQUIPOS
+                   </div>
+                </Link>
+                <Link to="/historial" style={getLinkStyle('/historial')}>
+                   <div style={navLinkTextStyle}> 
+                     <History size={18} style={navIconStyle} /> 
+                     HISTORIAL
+                   </div>
+                </Link>
+                <Link 
+                  to="/admin/perfiles"
+                  style={getLinkStyle('/admin')} 
+                  onClick={toggleAdminMenu}
+                >
+                  <div style={navLinkTextStyle}> 
+                     <FileCog size={18} style={navIconStyle} />
+                     ADMIN
+                  </div>
+                  {isAdminOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </Link>
+                
+                {isAdminOpen && (
+                  <>
+                    {/* --- Enlace Costos Condicional (Comentado para ocultarlo permanentemente por ahora) --- */} 
+                    {/* {showCostosLink && (
+                        <Link 
+                          to="/admin/costos" 
+                          style={getLinkStyle('/admin/costos', true)} 
+                        >
+                           <div style={navLinkTextStyle}> 
+                              <SlidersHorizontal size={16} style={{...navIconStyle, marginRight: '8px'}} /> 
+                              Costos
+                           </div>
+                        </Link>
+                    )} */}
+                    {/* Enlace Perfiles (se mantiene igual) */} 
+                    <Link 
+                      to="/admin/perfiles" 
+                      style={getLinkStyle('/admin/perfiles', true)} 
+                    >
+                       <div style={navLinkTextStyle}> 
+                          <Users size={16} style={{...navIconStyle, marginRight: '8px'}} /> 
+                          Perfiles
+                       </div>
+                    </Link>
+                    {/* Enlace Cargar Equipos (se mantiene igual) */} 
+                    <Link 
+                      to="/admin/carga-equipos" 
+                      style={getLinkStyle('/admin/carga-equipos', true)} 
+                    >
+                       <div style={navLinkTextStyle}> 
+                          <UploadCloud size={16} style={{...navIconStyle, marginRight: '8px'}} /> 
+                          Cargar Equipos
+                       </div>
+                    </Link>
+                  </>
+                )}
+              </nav>
+            </div>
+            <div style={contentStyle}>
+              <Outlet />
+            </div>
           </div>
-          <div style={contentStyle}> {/* Contenedor del contenido principal */}
-            <Outlet />
-          </div>
+          {/* ChatWidget y ProfileEditModal se mueven fuera de este div */}
         </div>
-      </div>
-      {/* Renderizar ChatWidget pasando SOLO handleOpenChatClick */}
-      <ChatWidget ref={chatWidgetRef} onBubbleClick={handleOpenChatClick} />
+        
+        {/* Elementos que deben estar por encima de todo y relativos al viewport */}
+        <ChatWidget ref={chatWidgetRef} onBubbleClick={handleOpenChatClick} />
+        <ProfileEditModal 
+          isOpen={isProfileModalOpen} 
+          onClose={toggleProfileModal} 
+        />
+      </>
     </ThemeProvider>
   );
 }
