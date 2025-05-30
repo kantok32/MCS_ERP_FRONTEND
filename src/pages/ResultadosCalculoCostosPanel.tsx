@@ -45,11 +45,12 @@ const formatCurrency = (value: number | null | undefined, currencySymbol: string
 
 const formatCLP = (value: number | null | undefined): string => {
   if (value === null || value === undefined || isNaN(value)) return '--';
-  let numberPart = value.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  if (numberPart.endsWith(',00')) {
-    numberPart = numberPart.substring(0, numberPart.length - 3);
-  }
-  return `$ ${numberPart}`; 
+  // Redondear al entero más cercano primero
+  const roundedValue = Math.round(value);
+  // Usar 'es-CL' para el formato chileno (punto como separador de miles, sin decimales por defecto para enteros)
+  // o 'de-DE' que también usa punto para miles y no mostrará decimales para enteros.
+  // Si es-CL no da el resultado esperado (a veces depende del runtime de JS), de-DE es una alternativa robusta.
+  return `$${roundedValue.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`; 
 };
 
 const formatGenericCurrency = (value: number | null | undefined, currency: 'USD' | 'EUR', digits = 2): string => {
@@ -75,9 +76,14 @@ const formatPercentDisplay = (value: number | null | undefined, digits = 0): str
 
 const formatNumber = (value: number | null | undefined, digits = 2): string => {
     if (value === null || value === undefined || isNaN(value)) return '--';
-    let formattedNumber = value.toLocaleString('es-ES', { minimumFractionDigits: digits, maximumFractionDigits: digits });
-    // If digits is 2 (common case for this rule) and formatted number ends with ',00', strip it.
-    if (digits === 2 && formattedNumber.endsWith(',00')) {
+    const roundedValue = (digits === 0) ? Math.round(value) : value; 
+    // Para formatNumber con digits = 0, queremos el punto como separador de miles.
+    // 'es-CL' o 'de-DE' sirven para esto.
+    const localeForFormatting = (digits === 0) ? 'es-CL' : 'es-ES';
+    let formattedNumber = roundedValue.toLocaleString(localeForFormatting, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    
+    // Esta regla de quitar ,00 se aplica si el locale original era es-ES y digits era 2
+    if (localeForFormatting === 'es-ES' && digits === 2 && formattedNumber.endsWith(',00')) {
         formattedNumber = formattedNumber.substring(0, formattedNumber.length - 3);
     }
     return formattedNumber;
@@ -202,7 +208,7 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
             
             // Specific formatting for Precios Cliente CLP fields
             if (preciosClienteCLPKeys.includes(lowerKey)) {
-                return `$ ${formatNumber(value, 0)}`;
+                return formatCLP(value);
             }
             
             // Check for general CLP fields (must end with _clp or be exactly 'clp' for safety, and not be special keys handled above)
@@ -601,47 +607,54 @@ export default function ResultadosCalculoCostosPanel() {
           const detalleCalculoPrincipal = await fetchCalculoDetallado(
             linea.principal,
             linea.principal.datos_contables?.costo_fabrica || 0,
-            linea.principal.datos_contables?.fecha_cotizacion as string | Date | undefined,
+            linea.principal.datos_contables?.fecha_cotizacion,
             currentProfileData._id,
             anoActualGlobal,
             tipoCambioEurUsd,
             currentProfileData.nombre_perfil,
             perfilesList
-        );
+          );
 
-        const detallesCalculoOpcionales = await Promise.all(
-          linea.opcionales.map(opcional =>
+          const detallesCalculoOpcionalesPromises = linea.opcionales.map(opcional => 
             fetchCalculoDetallado(
               opcional,
               opcional.datos_contables?.costo_fabrica || 0,
-              opcional.datos_contables?.fecha_cotizacion as string | Date | undefined,
+              opcional.datos_contables?.fecha_cotizacion,
               currentProfileData._id,
               anoActualGlobal,
               tipoCambioEurUsd,
               currentProfileData.nombre_perfil,
               perfilesList
             )
-            )
           );
+          const resultadosOpcionalesDetalles = await Promise.all(detallesCalculoOpcionalesPromises);
+          
+          const validosOpcionalesDetalles = resultadosOpcionalesDetalles.filter(d => d && !d.error);
 
-        return {
+          const lineaConDetallesPotencial = {
             ...linea,
             detalleCalculoPrincipal,
-            detallesCalculoOpcionales,
+            detallesCalculoOpcionales: validosOpcionalesDetalles,
           };
+
+          if (detalleCalculoPrincipal && !detalleCalculoPrincipal.error) {
+            return lineaConDetallesPotencial as LineaDeTrabajoConCosto; 
+          } else {
+            console.warn(`Línea para ${linea.principal.codigo_producto} inválida, detalle principal ausente o con error.`);
+            return null;
+          }
+
         } catch (error) {
-          console.error('[ResultadosCalculoCostosPanel] Error en cálculo detallado:', error);
-          setErrorCarga(`Error al calcular costos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-          return null;
+          console.error(`Error procesando línea para ${linea.principal.codigo_producto} en realizarCalculoDetallado:`, error);
+          return null; 
         }
       })
     );
 
-    const lineasValidas = nuevasLineas.filter((linea): linea is LineaDeTrabajoConCosto => linea !== null) as LineaDeTrabajoConCosto[];
+    const lineasValidas = nuevasLineas.filter(linea => linea !== null) as LineaDeTrabajoConCosto[];
 
-    if (lineasValidas.length === 0) {
-      setErrorCarga("No se pudo calcular ninguna línea. Por favor, verifique los datos e intente nuevamente.");
-      return null; 
+    if (lineasValidas.length === 0 && nuevasLineas.length > 0) {
+      console.warn("Ninguna línea de trabajo pudo ser calculada con detalle.");
     }
 
     return lineasValidas;
@@ -875,24 +888,38 @@ export default function ResultadosCalculoCostosPanel() {
           const tieneDetalles = !!linea.detalleCalculoPrincipal && !linea.detalleCalculoPrincipal.error;
 
           return (
-            <Accordion key={key} expanded={isExpanded} onChange={() => toggleExpandItem(key)} sx={{ mb: 1.5 }}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls={`panel${index}-content`} id={`panel${index}-header`}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                  <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                    {linea.principal.nombre_del_producto || 'Producto Principal'}
-                    {linea.opcionales.length > 0 && 
-                        <Chip label={`${linea.opcionales.length} opcionales`} />}
+            <Accordion key={key} expanded={isExpanded} onChange={() => toggleExpandItem(key)} sx={{ mb: 2 }}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls={`${key}-content`} id={`${key}-header`}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'medium', flexBasis: '60%' }}>
+                    {linea.principal.nombre_del_producto || linea.principal.codigo_producto}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ flexBasis: '40%', textAlign: 'right' }}>
+                    Total Principal: {linea.precioVentaTotalClienteCLPPrincipal ? formatCLP(linea.precioVentaTotalClienteCLPPrincipal) : 'Calculando...'}
                   </Typography>
                 </Box>
               </AccordionSummary>
               <AccordionDetails>
-                {tieneDetalles && (
-                  <>
-                    <RenderResultDetails detalle={linea.detalleCalculoPrincipal} profile={currentProfileData} />
-                    {linea.detallesCalculoOpcionales.map((detalleOpcional, idx) => (
-                      <RenderResultDetails key={`opcional-${idx}`} detalle={detalleOpcional} profile={currentProfileData} />
+                <Typography variant="h6" gutterBottom>Detalles del Producto Principal</Typography>
+                <RenderResultDetails detalle={linea.detalleCalculoPrincipal || null} profile={currentProfileData} />
+                
+                {(linea.detallesCalculoOpcionales || []).length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="h6" gutterBottom>Detalles de Opcionales</Typography>
+                    {(linea.detallesCalculoOpcionales || []).map((opcionalDetalle, opIndex) => (
+                      <Box key={opcionalDetalle.inputs?.codigo_producto || `op-${index}-${opIndex}`} sx={{ mb: 2, pl: 2, borderLeft: '3px solid #eee' }}>
+                        <Typography variant="subtitle1" sx={{mb:1, fontWeight:'medium'}}>
+                            Opcional: {opcionalDetalle.inputs?.nombre_opcional || opcionalDetalle.inputs?.codigo_producto || 'Opcional Desconocido'}
+                        </Typography>
+                        <RenderResultDetails detalle={opcionalDetalle || null} profile={currentProfileData} />
+                      </Box>
                     ))}
-                  </>
+                  </Box>
+                )}
+                 {(!linea.detallesCalculoOpcionales || linea.detallesCalculoOpcionales.length === 0) && linea.opcionales.length > 0 && (
+                    <Typography sx={{mt:1, fontStyle: 'italic'}} color="textSecondary">
+                        Detalle de cálculo para opcionales no disponible o no calculado aún.
+                    </Typography>
                 )}
               </AccordionDetails>
             </Accordion>

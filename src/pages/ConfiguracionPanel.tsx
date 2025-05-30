@@ -80,8 +80,9 @@ export default function ConfiguracionPanel() {
     }
     // Helper para formatear CLP
     function formatCLP(value: number | null | undefined) {
-      if (typeof value !== 'number' || isNaN(value)) return '-';
-      return '$' + value.toLocaleString('es-CL', { minimumFractionDigits: 0 });
+      if (value === null || value === undefined || isNaN(value)) return '--';
+      const roundedValue = Math.round(value);
+      return `$${roundedValue.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
     }
     // Generar el HTML usando los datos del formulario y los equipos
     const numeroDocumento = historialId ? `${historialId}` : '-';
