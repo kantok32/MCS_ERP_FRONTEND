@@ -445,10 +445,10 @@ export default function ResultadosCalculoCostosPanel() {
   const [perfilesList, setPerfilesList] = useState<CostoPerfilData[]>([]);
   const [isProfilesLoading, setIsProfilesLoading] = useState<boolean>(true);
   
-  const [selectedProfileId, setSelectedProfileId] = useState<string>(location.state?.selectedProfileId || '');
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [currentProfileData, setCurrentProfileData] = useState<CostoPerfilData | null>(null);
   
-  const [tipoCambioEurUsd, setTipoCambioEurUsd] = useState<number | null>(null);
+  const [tipoCambioEurUsd, setTipoCambioEurUsd] = useState<number>(1.08);
   const [isLoadingTipoCambio, setIsLoadingTipoCambio] = useState(false);
   
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
@@ -459,6 +459,9 @@ export default function ResultadosCalculoCostosPanel() {
 
   const [lineSpecificProfileIds, setLineSpecificProfileIds] = useState<Record<string, string>>({});
   const [recalculatingLine, setRecalculatingLine] = useState<string | null>(null);
+
+  // Nuevo estado para la configuración guardada
+  const [ultimaConfiguracionGuardada, setUltimaConfiguracionGuardada] = useState<any | null>(null);
 
   const cargarPerfilesDesdeAPI = useCallback(async () => {
     setIsProfilesLoading(true);
@@ -760,19 +763,50 @@ export default function ResultadosCalculoCostosPanel() {
     const perfilParaGuardar = currentProfileData || (perfilesList.length > 0 ? perfilesList[0] : null);
     if (!perfilParaGuardar) {
         setSaveErrorMessage("No se pudo determinar un perfil de costo para el guardado (perfilParaGuardar es null).");
-        setIsSaving(false);
+        // setIsSaving(false); // Ya no es necesario aquí si se setea antes del try
         return;
     }
+
+    // Determinar el nombre del perfil para el reporte (lógica similar a handleGenerarInformeHTML)
+    let nombrePerfilParaReporteGuardado = "Múltiples Perfiles Aplicados";
+    if (lineasCalculadas && lineasCalculadas.length > 0 && perfilesList.length > 0) {
+        const firstLineProfileId = lineasCalculadas[0].profileIdForCalc;
+        if (firstLineProfileId) {
+            const allLinesUseSameProfile = lineasCalculadas.every(
+                linea => linea.profileIdForCalc === firstLineProfileId
+            );
+            if (allLinesUseSameProfile) {
+                const profile = perfilesList.find(p => p._id === firstLineProfileId);
+                if (profile) {
+                    nombrePerfilParaReporteGuardado = capitalizeFirstLetter(profile.nombre_perfil);
+                }
+            }
+        } else {
+            // Fallback si no hay profileIdForCalc en la primera línea (debería haberlo)
+            nombrePerfilParaReporteGuardado = capitalizeFirstLetter(perfilParaGuardar.nombre_perfil || "Perfil General");
+        }
+    } else {
+        nombrePerfilParaReporteGuardado = capitalizeFirstLetter(perfilParaGuardar.nombre_perfil || "Error al determinar perfil");
+    }
+
+    const configuracionActualParaGuardar = {
+        fechaCreacion: new Date().toISOString(),
+        nombrePerfilReporte: nombrePerfilParaReporteGuardado,
+        // Copias profundas para evitar que mutaciones posteriores afecten la versión guardada
+        lineasCalculadas: JSON.parse(JSON.stringify(lineasCalculadas)), 
+        perfilesList: JSON.parse(JSON.stringify(perfilesList)), 
+        latestCalculatedResults: JSON.parse(JSON.stringify(latestCalculatedResults))
+    };
+    setUltimaConfiguracionGuardada(configuracionActualParaGuardar);
+    console.log("Configuración para informe guardada en estado local:", configuracionActualParaGuardar);
 
     setIsSaving(true);
     setSaveSuccessMessage(null);
     setSaveErrorMessage(null);
     
-    // Construir CotizacionDetails (puede estar vacío o con valores por defecto)
     const cotizacionDetails: CotizacionDetails = {
-        emisorNombre: perfilParaGuardar.nombre_perfil, // Ejemplo
+        emisorNombre: perfilParaGuardar.nombre_perfil, 
         fechaCreacionCotizacion: new Date().toISOString(),
-        // ...otros campos de CotizacionDetails que quieras setear por defecto
     };
 
     const payload: GuardarCalculoPayload = {
@@ -782,12 +816,10 @@ export default function ResultadosCalculoCostosPanel() {
       nombrePerfil: perfilParaGuardar.nombre_perfil,
       anoEnCursoGlobal: location.state?.anoEnCursoGlobal || new Date().getFullYear(),
       cotizacionDetails: cotizacionDetails, 
-      // Podríamos añadir un campo extra para lineSpecificProfileIds si el backend lo soportara
-      // lineSpecificProfileIds: lineSpecificProfileIds // Ejemplo, si se quisiera guardar
     };
 
     try {
-      const savedData = await guardarCalculoHistorial(payload); // Usar el payload construido
+      const savedData = await guardarCalculoHistorial(payload); 
       setSavedCalculoId(savedData._id);
       setSaveSuccessMessage(`Cálculo guardado con éxito (ID: ${savedData._id})`);
     } catch (error) {
@@ -807,17 +839,47 @@ export default function ResultadosCalculoCostosPanel() {
   };
 
   const handleGenerarInformeHTML = () => {
-    if (latestCalculatedResults && (currentProfileData || perfilesList.length > 0)) {
-        const profileNameToUse = currentProfileData?.nombre_perfil || (perfilesList[0]?.nombre_perfil || "Perfil No Especificado");
-        const configuracionParaHTML = {
-            fechaCreacion: new Date().toISOString(),
-            nombrePerfil: profileNameToUse,
-            lineasCalculadas: lineasCalculadas, 
-            resultadosCalculados: latestCalculatedResults 
+    let configuracionAUsar: any | null = null; // Tipar mejor si es posible
+
+    if (ultimaConfiguracionGuardada) {
+        configuracionAUsar = ultimaConfiguracionGuardada;
+        console.log("Generando informe con la última configuración guardada en memoria.");
+    } else if (latestCalculatedResults && lineasCalculadas && lineasCalculadas.length > 0 && perfilesList.length > 0) {
+        console.log("Generando informe con la configuración en vivo (no se encontró una guardada recientemente).");
+        let reportProfileName = "Múltiples Perfiles Aplicados";
+        const firstLineProfileId = lineasCalculadas[0].profileIdForCalc;
+        
+        if (firstLineProfileId) {
+            const allLinesUseSameProfile = lineasCalculadas.every(
+                linea => linea.profileIdForCalc === firstLineProfileId
+            );
+            if (allLinesUseSameProfile) {
+                const profile = perfilesList.find(p => p._id === firstLineProfileId);
+                if (profile) {
+                    reportProfileName = capitalizeFirstLetter(profile.nombre_perfil);
+                }
+            }
+        } else {
+            // Si no hay profileIdForCalc en la primera línea (raro, pero como fallback)
+            // O si se quiere que el nombre del perfil global sea el principal si no hay uno específico por línea
+            reportProfileName = capitalizeFirstLetter(currentProfileData?.nombre_perfil || perfilesList[0]?.nombre_perfil || "Perfil General");
+        }
+
+        configuracionAUsar = {
+            fechaCreacion: new Date().toISOString(), // Fecha actual si es en vivo
+            nombrePerfilReporte: reportProfileName,
+            lineasCalculadas: lineasCalculadas, // Referencia directa si es en vivo, DocumentoHTMLPanel no debería mutar
+            perfilesList: perfilesList,
+            latestCalculatedResults: latestCalculatedResults
         };
-        navigate('/documento_html', { state: { configuracion: configuracionParaHTML } });
     } else {
-        setErrorCarga("No hay resultados calculados o perfil definido para generar el informe.");
+        // No hacer nada si no hay datos, setErrorCarga se maneja abajo
+    }
+
+    if (configuracionAUsar) {
+        navigate('/documento_html', { state: { configuracion: configuracionAUsar } });
+    } else {
+        setErrorCarga("No hay resultados calculados, líneas, o perfiles definidos para generar el informe. Realice un cálculo primero o guarde uno existente.");
     }
   };
 
