@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Button, Box, Paper } from '@mui/material';
+import { Button, Box, Typography, Paper } from '@mui/material';
+import { ArrowLeft, Download } from 'lucide-react';
 
 export default function DocumentoHtmlPage() {
   const location = useLocation();
@@ -32,28 +33,54 @@ export default function DocumentoHtmlPage() {
     }
   };
 
+  const handleGoBack = () => {
+    navigate('/equipos');
+  };
+
   return (
-    <Box sx={{ minHeight: '100vh', background: '#f3f4f6', py: 4 }}>
-      <Paper sx={{ maxWidth: 1200, mx: 'auto', p: 2, mb: 2, boxShadow: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-          <Button variant="outlined" onClick={() => navigate(-1)}>
-            Volver
-          </Button>
-          {html && (
-            <Button variant="contained" color="primary" onClick={handleExportPDF}>
-              Exportar a PDF
-            </Button>
-          )}
-        </Box>
-        {html ? (
-          <div ref={printRef} style={{ background: 'white', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: 24, minHeight: 600 }}
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-        ) : (
-          <div style={{ color: 'red', textAlign: 'center', padding: 40 }}>
-            No se encontró ningún documento HTML para mostrar.
-          </div>
-        )}
+    <Box sx={{ p: { xs: 2, md: 3 }, fontFamily: 'Arial, sans-serif' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Button 
+          variant="outlined" 
+          startIcon={<Download size={18} />} 
+          onClick={handleExportPDF}
+        >
+          Exportar
+        </Button>
+        <Button 
+          variant="outlined" 
+          startIcon={<ArrowLeft size={18} />} 
+          onClick={handleGoBack}
+        >
+          Volver a Equipos
+        </Button>
+      </Box>
+
+      <Paper elevation={2} sx={{p:3}}>
+        <Typography variant="h4" component="h1" sx={{ borderBottom: '2px solid #eee', pb: 1, mb: 2 }}>
+          Informe: {location.state?.productName || 'Documento'}
+        </Typography>
+        <Box 
+          ref={printRef} 
+          style={{ background: 'white', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: 24, minHeight: 600 }}
+          dangerouslySetInnerHTML={{ __html: html }}
+          sx={{
+            border: '1px solid #ddd',
+            '& table': {
+              width: '100%',
+              borderCollapse: 'collapse',
+              mb: 2,
+            },
+            '& th, & td': {
+              border: '1px solid #ccc',
+              p: 1,
+              textAlign: 'left',
+            },
+            '& th': {
+              backgroundColor: '#f8f8f8',
+            }
+          }}
+        />
       </Paper>
     </Box>
   );

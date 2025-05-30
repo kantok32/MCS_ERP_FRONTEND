@@ -54,10 +54,29 @@ const labelStyle: React.CSSProperties = {
   textTransform: 'uppercase'
 };
 
-// Función para formatear números como moneda EUR
+// Función para formatear números como valor EUR con punto de miles y sin decimales
+const formatEurPrice = (value: number | undefined | null) => {
+  if (value === undefined || value === null) return 'N/A';
+  // Usar 'es-ES' o 'de-DE' para punto como separador de miles.
+  // Math.round para asegurar que no haya decimales antes de formatear.
+  return `${Math.round(value).toLocaleString('es-ES')} EUR`; 
+};
+
+// Función para capitalizar en formato de título español (simple)
+const capitalizeSpanishTitleCase = (text: string | undefined | null): string => {
+  if (!text) return '-';
+  return text
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+// La función original formatCurrency, si se usa en otros lugares con formato € y decimales, se puede mantener.
+// Si solo se usa aquí, se podría eliminar o comentar.
 const formatCurrency = (value: number | undefined | null) => {
   if (value === undefined || value === null) return 'N/A';
-  return `€${value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; // Formato alemán para separadores correctos con EUR
+  return `€${value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export default function ResumenCargaPanel() {
@@ -166,9 +185,9 @@ export default function ResumenCargaPanel() {
                   <TableBody>
                     <TableRow>
                       <TableCell>{item.principal.codigo_producto || '-'}</TableCell>
-                      <TableCell>{item.principal.nombre_del_producto || '-'}</TableCell>
+                      <TableCell>{capitalizeSpanishTitleCase(item.principal.nombre_del_producto)}</TableCell>
                       <TableCell>{item.principal.datos_contables?.fecha_cotizacion || item.principal.fecha_cotizacion || '-'}</TableCell>
-                      <TableCell sx={{ textAlign: 'right' }}>{formatCurrency(item.principal.datos_contables?.costo_fabrica || item.principal.costo_fabrica)}</TableCell>
+                      <TableCell sx={{ textAlign: 'right' }}>{formatEurPrice(item.principal.datos_contables?.costo_fabrica || item.principal.costo_fabrica)}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -203,9 +222,9 @@ export default function ResumenCargaPanel() {
                       {item.opcionales.map((opcional, opIndex) => (
                         <TableRow key={opcional.codigo_producto || opIndex}>
                           <TableCell>{opcional.codigo_producto || '-'}</TableCell>
-                          <TableCell>{opcional.nombre_del_producto || '-'}</TableCell>
+                          <TableCell>{capitalizeSpanishTitleCase(opcional.nombre_del_producto)}</TableCell>
                           <TableCell>{opcional.datos_contables?.fecha_cotizacion || opcional.fecha_cotizacion || '-'}</TableCell>
-                          <TableCell sx={{ textAlign: 'right' }}>{formatCurrency(opcional.datos_contables?.costo_fabrica || opcional.costo_fabrica)}</TableCell>
+                          <TableCell sx={{ textAlign: 'right' }}>{formatEurPrice(opcional.datos_contables?.costo_fabrica || opcional.costo_fabrica)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
