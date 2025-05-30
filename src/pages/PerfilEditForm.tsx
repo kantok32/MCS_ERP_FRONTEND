@@ -230,16 +230,16 @@ const PerfilEditForm: React.FC<PerfilEditFormProps> = ({ profileId, onSaveSucces
   }
 
   const actualFormContent = (
-    <Box component="form" onSubmit={handleSubmit}>
-      <Accordion defaultExpanded sx={{ mb: 2.5, boxShadow: 'none', '&::before': { display: 'none' } }}>
+    <Box component="form" onSubmit={handleSubmit} sx={{width: '100%', mt: 1 }}>
+      <Accordion defaultExpanded sx={{ mb: 3.5, boxShadow: 'none', '&::before': { display: 'none' } }}>
         <AccordionSummary expandIcon={<ChevronDown />} aria-controls="general-content" id="general-header">
           <Typography variant="h6" sx={{ fontWeight: 500 }}>Datos Generales</Typography>
         </AccordionSummary>
-        <AccordionDetails sx={{ pt: 1, pb: 2 }}>
-          <Grid container spacing={3}>
+        <AccordionDetails sx={{ pt: 2, pb: 3 }}>
+          <Grid container spacing={3.5}>
             {renderTextField('nombre_perfil', 'Nombre del Perfil', 'text', true, undefined, { md: 6 })}
             {renderTextField('descripcion', 'Descripción', 'text', false, undefined, { md: 6 })}
-            <Grid item xs={12} sx={{pt: 1.5, display: 'flex', alignItems: 'center' }}>
+            <Grid item xs={12} sx={{pt: 2, display: 'flex', alignItems: 'center' }}>
               <FormControlLabel
                 control={<Switch 
                             checked={!!perfilData?.activo} 
@@ -248,6 +248,7 @@ const PerfilEditForm: React.FC<PerfilEditFormProps> = ({ profileId, onSaveSucces
                             disabled={isSaving || (loading && !!idToUse)} 
                          />}
                 label="Perfil Activo"
+                sx={{ color: perfilData?.activo ? 'text.primary' : 'text.secondary' }}
               />
             </Grid>
           </Grid>
@@ -329,38 +330,27 @@ const PerfilEditForm: React.FC<PerfilEditFormProps> = ({ profileId, onSaveSucces
 
   if (isStandalonePage) {
     return (
-      <Container maxWidth="md" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
-        <Paper elevation={2} sx={{ p: { xs: 2, sm: 3, md: 4 }, borderRadius: '12px' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 3, md: 4 } }}>
-            <IconButton onClick={handleCancel} sx={{ mr: 1.5, color: 'action.active' }} aria-label="Volver">
-              <ArrowLeft />
-            </IconButton>
-            <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
+      <Container maxWidth="lg" sx={{ mt: 3, mb: 3 }}>
+        <Paper sx={{ p: { xs: 2, sm: 3, md: 4 }, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h5" component="h1" gutterBottom sx={{ fontWeight: 'bold' }}>
               {idToUse ? 'Editar Perfil' : 'Crear Nuevo Perfil'}
             </Typography>
+            {idToUse && (
+              <Button variant="outlined" onClick={() => navigate('/admin/perfiles')} startIcon={<ArrowLeft size={18}/>}>
+                Volver a Perfiles
+              </Button>
+            )}
           </Box>
-
+          <Divider sx={{ mb: 2 }}/>
           {loading && idToUse ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 5 }}>
-                <CircularProgress sx={{ mb: 2 }} />
-                <Typography color="text.secondary">Cargando datos del perfil...</Typography>
-            </Box>
-          ) : error && !isSaving ? (
-            <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
-          ) : (
-            actualFormContent 
-          )}
-          
+            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px'}}><CircularProgress /></Box>
+          ) : actualFormContent}
         </Paper>
-        <Snackbar 
-            open={snackbarOpen} 
-            autoHideDuration={4000} 
-            onClose={handleCloseSnackbar} 
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        >
-            <Alert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
-                {snackbarMessage}
-            </Alert>
+        <Snackbar open={snackbarOpen} autoHideDuration={4000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+          <Alert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
+            {snackbarMessage}
+          </Alert>
         </Snackbar>
       </Container>
     );

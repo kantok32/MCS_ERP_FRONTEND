@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Box, Button, CircularProgress, Container, TextField, Typography, Paper, Grid, Divider, TextareaAutosize } from '@mui/material';
+import { Box, Button, CircularProgress, TextField, Typography, Paper, Grid, TextareaAutosize } from '@mui/material';
 import { ArrowLeft, DownloadCloud } from 'lucide-react';
 import { Producto } from '../types/product'; // Importar la interfaz Producto
 
@@ -34,6 +34,16 @@ interface CotizacionFormData {
   // Comentarios
   comentariosAdicionales: string;
 }
+
+// Estilos inspirados en EquipoEditModal
+const pageBackgroundColor = '#F9FAFB'; // Gris muy claro para el fondo de la página
+const paperBackgroundColor = '#FFFFFF'; // Blanco para el Paper principal
+const primaryBlue = '#2563eb'; // Azul principal para acentos y títulos
+const lightBlue = '#38bdf8'; // Azul claro para gradientes o botones secundarios
+const inputBorderColor = '#CBD5E1'; // Borde para inputs
+const inputBackgroundColor = '#F1F5F9'; // Fondo para inputs
+const textColorPrimary = '#1F2937'; // Texto oscuro principal
+const textColorSecondary = '#4B5563'; // Texto secundario/labels
 
 export default function ConfiguracionPanel() {
   const location = useLocation();
@@ -96,27 +106,27 @@ export default function ConfiguracionPanel() {
         <style>
           body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #222; margin: 0; padding: 0; }
           .container { max-width: 900px; margin: 40px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 32px; }
-          h1 { color: #1976d2; margin-bottom: 8px; }
-          h2 { color: #2196f3; margin-top: 32px; margin-bottom: 12px; }
+          h1 { color: ${primaryBlue}; margin-bottom: 8px; }
+          h2 { color: ${primaryBlue}; margin-top: 32px; margin-bottom: 12px; }
           .section { margin-bottom: 32px; }
           .row { display: flex; gap: 32px; }
           .col { flex: 1; }
-          .label { font-weight: 600; color: #555; margin-bottom: 2px; }
-          .value { margin-bottom: 10px; }
-          .box { background: #f3f4f6; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
-          .comentarios { background: #f8fafc; border-radius: 6px; padding: 12px; margin-top: 8px; }
+          .label { font-weight: 600; color: ${textColorSecondary}; margin-bottom: 2px; }
+          .value { margin-bottom: 10px; color: ${textColorPrimary};}
+          .box { background: ${inputBackgroundColor}; border-radius: 8px; padding: 16px; margin-bottom: 16px; border: 1px solid ${inputBorderColor}; }
+          .comentarios { background: ${inputBackgroundColor}; border: 1px solid ${inputBorderColor}; border-radius: 6px; padding: 12px; margin-top: 8px; color: ${textColorPrimary}; }
           .footer { text-align: center; color: #888; margin-top: 40px; font-size: 0.95em; }
           table { width: 100%; border-collapse: collapse; margin-top: 18px; }
-          th, td { padding: 10px 8px; border-bottom: 1px solid #e5e7eb; text-align: left; }
-          th { background: #f3f4f6; color: #1976d2; font-size: 1.05em; }
-          .opcional-row td { color: #555; padding-left: 32px; font-style: italic; }
+          th, td { padding: 10px 8px; border-bottom: 1px solid #e5e7eb; text-align: left; color: ${textColorPrimary}; }
+          th { background: ${inputBackgroundColor}; color: ${primaryBlue}; font-size: 1.05em; }
+          .opcional-row td { color: ${textColorSecondary}; padding-left: 32px; font-style: italic; }
           .precio { text-align: right; font-weight: 500; }
         </style>
       </head>
       <body>
         <div class="container">
           <h1>Informe de Configuración</h1>
-          <div style="margin-bottom:18px;font-size:1.1em;"><b>Número:</b> ${numeroDocumento}</div>
+          <div style="margin-bottom:18px;font-size:1.1em; color: ${textColorPrimary};"><b>Número:</b> ${numeroDocumento}</div>
           <div class="section row">
             <div class="col box">
               <div class="label">Emisor</div>
@@ -167,7 +177,7 @@ export default function ConfiguracionPanel() {
                 }).join('')}
               </tbody>
             </table>
-            <div style="margin-top: 10px; color: #555;">Total de equipos principales: ${calculosData.itemsParaCotizar.length}</div>
+            <div style="margin-top: 10px; color: ${textColorSecondary};">Total de equipos principales: ${calculosData.itemsParaCotizar.length}</div>
           </div>
           <div class="footer">
             Informe generado automáticamente por el sistema MCS ERP<br>
@@ -181,62 +191,103 @@ export default function ConfiguracionPanel() {
   };
 
   if (!calculosData) {
-    return <Typography>Cargando datos de cálculo...</Typography>; // O un spinner más elegante
+    return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: pageBackgroundColor }}><CircularProgress /></Box>;
   }
 
-  // Estilos básicos para el layout
-  const mainPaperStyle: React.CSSProperties = { padding: '24px', margin: '20px 0' };
-  const sectionTitleStyle: React.CSSProperties = { marginTop: '20px', marginBottom: '10px' };
+  const textFieldStyles = {
+    '& .MuiOutlinedInput-root': {
+      backgroundColor: inputBackgroundColor,
+      '& fieldset': {
+        borderColor: inputBorderColor,
+      },
+      '&:hover fieldset': {
+        borderColor: primaryBlue,
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: primaryBlue,
+        borderWidth: '1.5px',
+      },
+    },
+    '& .MuiInputLabel-root': {
+      color: textColorSecondary,
+    },
+    '& .MuiInputLabel-root.Mui-focused': {
+      color: primaryBlue,
+    },
+    '& .MuiInputBase-input': {
+      color: textColorPrimary,
+    }
+  };
+  
+  const textAreaStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '10px 12px',
+    borderColor: inputBorderColor,
+    borderRadius: '4px',
+    backgroundColor: inputBackgroundColor,
+    color: textColorPrimary,
+    fontFamily: 'inherit',
+    fontSize: '1rem',
+    boxSizing: 'border-box',
+  };
 
   return (
-    <Box sx={{ maxWidth: '1000px', margin: 'auto', padding: '20px' }}>
-      <Paper elevation={3} sx={mainPaperStyle}>
-        <Typography variant="h4" gutterBottom align="center">
-          Configurar Datos
+    <Box sx={{ maxWidth: '1000px', margin: 'auto', padding: '20px', backgroundColor: pageBackgroundColor, color: textColorPrimary }}>
+      <Paper elevation={3} sx={{ padding: {xs: '20px', md: '32px'}, margin: '20px 0', backgroundColor: paperBackgroundColor, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+        <Typography variant="h4" gutterBottom align="center" sx={{ color: primaryBlue, fontWeight: 600, mb: 4 }}>
+          Configurar Datos del Informe
         </Typography>
 
-        {/* SECCIÓN DATOS DEL EMISOR Y RECEPTOR */}
-        <Typography variant="h6" sx={sectionTitleStyle}>Datos del Emisor y Receptor</Typography>
-        <Grid container spacing={2}>
-          {/* Emisor */}
+        <Typography variant="h6" sx={{ color: primaryBlue, mt: 3, mb: 2, borderBottom: `1.5px solid ${inputBorderColor}`, pb: 1 }}>
+          Datos del Emisor y Receptor
+        </Typography>
+        <Grid container spacing={3}>
           <Grid item xs={12} sm={6}>
-            <Paper variant="outlined" sx={{ p: 2, height: '100%' }}>
-              <Typography variant="subtitle1" sx={{ mb: 1 }}>Emisor</Typography>
-              <TextField fullWidth label="Presupuesto Creado por" name="emisorNombre" value={formData.emisorNombre} onChange={handleChange} sx={{ mb: 2 }} />
-              <TextField fullWidth label="Área Comercial" name="emisorAreaComercial" value={formData.emisorAreaComercial} onChange={handleChange} sx={{ mb: 2 }} />
-              <TextField fullWidth label="Email Emisor" name="emisorEmail" type="email" value={formData.emisorEmail} onChange={handleChange} />
+            <Paper variant="outlined" sx={{ p: 2.5, height: '100%', borderColor: inputBorderColor, backgroundColor: paperBackgroundColor }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500, color: textColorSecondary }}>Emisor</Typography>
+              <TextField fullWidth label="Presupuesto Creado por" name="emisorNombre" value={formData.emisorNombre} onChange={handleChange} sx={{ ...textFieldStyles, mb: 2 }} />
+              <TextField fullWidth label="Área Comercial" name="emisorAreaComercial" value={formData.emisorAreaComercial} onChange={handleChange} sx={{ ...textFieldStyles, mb: 2 }} />
+              <TextField fullWidth label="Email Emisor" name="emisorEmail" type="email" value={formData.emisorEmail} onChange={handleChange} sx={textFieldStyles} />
             </Paper>
           </Grid>
-          {/* Receptor */}
           <Grid item xs={12} sm={6}>
-            <Paper variant="outlined" sx={{ p: 2, height: '100%' }}>
-              <Typography variant="subtitle1" sx={{ mb: 1 }}>Receptor</Typography>
-              <TextField fullWidth label="Nombre del Cliente" name="receptorNombre" value={formData.receptorNombre} onChange={handleChange} sx={{ mb: 2 }} />
-              <TextField fullWidth label="Área Comercial Cliente" name="receptorAreaComercial" value={formData.receptorAreaComercial} onChange={handleChange} sx={{ mb: 2 }} />
-              <TextField fullWidth label="Email Cliente" name="receptorEmail" type="email" value={formData.receptorEmail} onChange={handleChange} />
+            <Paper variant="outlined" sx={{ p: 2.5, height: '100%', borderColor: inputBorderColor, backgroundColor: paperBackgroundColor }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500, color: textColorSecondary }}>Receptor</Typography>
+              <TextField fullWidth label="Nombre del Cliente" name="receptorNombre" value={formData.receptorNombre} onChange={handleChange} sx={{ ...textFieldStyles, mb: 2 }} />
+              <TextField fullWidth label="Área Comercial Cliente" name="receptorAreaComercial" value={formData.receptorAreaComercial} onChange={handleChange} sx={{ ...textFieldStyles, mb: 2 }} />
+              <TextField fullWidth label="Email Cliente" name="receptorEmail" type="email" value={formData.receptorEmail} onChange={handleChange} sx={textFieldStyles} />
             </Paper>
           </Grid>
         </Grid>
 
-        {/* SECCIÓN COMENTARIOS Y CONDICIONES MODIFICADA */}
-        <Typography variant="h6" sx={sectionTitleStyle}>Comentarios Adicionales</Typography>
+        <Typography variant="h6" sx={{ color: primaryBlue, mt: 4, mb: 2, borderBottom: `1.5px solid ${inputBorderColor}`, pb: 1 }}>
+          Comentarios Adicionales
+        </Typography>
         <Grid container spacing={2}>
           <Grid item xs={12}>
-            <TextareaAutosize minRows={3} style={{ width: '100%', padding: '8px', borderColor: '#ccc', borderRadius: '4px' }} name="comentariosAdicionales" value={formData.comentariosAdicionales} onChange={handleChange} placeholder="Ingrese comentarios adicionales aquí..."/>
+            <TextareaAutosize 
+                minRows={4}
+                style={textAreaStyle}
+                name="comentariosAdicionales" 
+                value={formData.comentariosAdicionales} 
+                onChange={handleChange} 
+                placeholder="Ingrese comentarios adicionales aquí..."
+            />
           </Grid>
         </Grid>
 
-        {/* Resumen de Items (Solo para visualización, no editable aquí) */}
-        <Typography variant="h6" sx={sectionTitleStyle}>Resumen de Equipos Calculados</Typography>
+        <Typography variant="h6" sx={{ color: primaryBlue, mt: 4, mb: 2, borderBottom: `1.5px solid ${inputBorderColor}`, pb: 1 }}>
+          Resumen de Equipos Calculados
+        </Typography>
         {calculosData.itemsParaCotizar.map((item, index) => (
-            <Box key={item.principal.codigo_producto || `item-${index}`} sx={{ mb: 2, p:1.5, border: '1px solid #eee', borderRadius: '4px'}}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+            <Box key={item.principal.codigo_producto || `item-${index}`} sx={{ mb: 2, p:1.5, border: `1px solid ${inputBorderColor}`, borderRadius: '6px', backgroundColor: inputBackgroundColor}}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: textColorPrimary }}>
                   {item.principal.nombre_del_producto || 'Equipo sin nombre'}
                 </Typography>
                 {item.opcionales && item.opcionales.length > 0 && (
                   <Box sx={{ pl: 2, mt: 0.5, fontSize: '0.9rem' }}>
-                    <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>Opcionales:</Typography>
-                    <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                    <Typography variant="body2" sx={{ fontStyle: 'italic', color: textColorSecondary }}>Opcionales:</Typography>
+                    <ul style={{ margin: 0, paddingLeft: '20px', color: textColorSecondary }}>
                       {item.opcionales.map((opcional, opIndex) => (
                         <li key={opcional.codigo_producto || `op-${index}-${opIndex}`}>
                           {opcional.nombre_del_producto || 'Opcional sin nombre'}
@@ -247,21 +298,40 @@ export default function ConfiguracionPanel() {
                 )}
             </Box>
         ))}
-        <Typography variant="body2" color="textSecondary" sx={{mt:1}}>
+        <Typography variant="body2" sx={{color: textColorSecondary, mt:1}}>
             Total de equipos principales: {calculosData.itemsParaCotizar.length}
         </Typography>
 
-        {/* Botones de Acción */}
-        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between' }}>
-          <Button variant="outlined" startIcon={<ArrowLeft />} onClick={() => navigate('/resultados-calculo-costos', { state: calculosData })}>
+        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Button 
+            variant="outlined" 
+            startIcon={<ArrowLeft />} 
+            onClick={() => navigate('/resultados-calculo-costos', { state: calculosData })}
+            sx={{ 
+              color: textColorSecondary, 
+              borderColor: inputBorderColor,
+              '&:hover': {
+                backgroundColor: inputBackgroundColor,
+                borderColor: textColorSecondary,
+              }
+            }}
+          >
             Volver a Resultados
           </Button>
           <Button 
             variant="contained" 
-            color="primary" 
             startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <DownloadCloud />} 
             onClick={handleGenerarInforme}
             disabled={isLoading}
+            sx={{ 
+              backgroundColor: primaryBlue, 
+              color: paperBackgroundColor, // Usar el blanco del papel para el texto
+              '&:hover': {
+                backgroundColor: lightBlue, // Un azul un poco más claro al pasar el mouse
+              },
+              padding: '10px 20px',
+              fontWeight: 600,
+            }}
           >
             {isLoading ? 'Generando Informe...' : 'Generar Informe'}
           </Button>

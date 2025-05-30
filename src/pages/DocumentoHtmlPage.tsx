@@ -1,7 +1,8 @@
 import React, { useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Button, Box, Typography, Paper } from '@mui/material';
-import { ArrowLeft, Download } from 'lucide-react';
+import { Button, Box, Typography, Paper, Modal, IconButton, Divider, Alert } from '@mui/material';
+import { ArrowLeft, Download, XCircle } from 'lucide-react';
+import PerfilEditForm from '../components/PerfilEditForm';
 
 export default function DocumentoHtmlPage() {
   const location = useLocation();
@@ -82,6 +83,50 @@ export default function DocumentoHtmlPage() {
           }}
         />
       </Paper>
+
+      {/* Modal para Editar Perfil */}
+      <Modal
+        open={isEditModalOpen}
+        onClose={handleCloseEditModal} // Usa el handler para cerrar y resetear ID
+        aria-labelledby="edit-profile-modal-title"
+        aria-describedby="edit-profile-modal-description"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Paper 
+          sx={{ 
+            p: { xs: 2, sm: 3, md: 4 }, // Padding existente
+            width: { xs: '95%', sm: '85%', md: '700px' }, // Ancho existente
+            maxWidth: '90vw', // Asegura que no exceda el viewport
+            maxHeight: '90vh', // Altura máxima
+            overflowY: 'auto', // Scroll si el contenido excede
+            borderRadius: '12px', // Bordes redondeados
+            boxShadow: 24, // Sombra estándar de MUI para modales
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography id="edit-profile-modal-title" variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>
+              Editar Perfil
+            </Typography>
+            <IconButton onClick={handleCloseEditModal} aria-label="Cerrar modal">
+              <XCircle />
+            </IconButton>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+          {editingProfileId ? (
+            <PerfilEditForm 
+              profileId={editingProfileId} 
+              onSaveSuccess={handleCloseEditModal} // Esto también cierra el modal y refresca
+              onCancel={handleCloseEditModal} 
+            />
+          ) : (
+            <Alert severity="info">Cargando datos del perfil o no se ha seleccionado un perfil...</Alert>
+          )}
+        </Paper>
+      </Modal>
     </Box>
   );
 } 

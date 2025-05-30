@@ -27,7 +27,8 @@ import {
     InputAdornment,
     Select,
     MenuItem,
-    SelectChangeEvent
+    SelectChangeEvent,
+    IconButton
 } from '@mui/material';
 import PerfilEditForm from './PerfilEditForm';
 import axios, { AxiosError } from 'axios';
@@ -1045,14 +1046,48 @@ export default function PerfilesPanel() {
            error={viewError}
        />
        
-       {isEditModalOpen && editingProfileId && (
-           <Modal open={isEditModalOpen} onClose={handleCloseEditModal} aria-labelledby="edit-profile-modal-title">
-               <Box sx={modalStyle}>
-                   <h2 id="edit-profile-modal-title">Editar Perfil</h2>
-                   <PerfilEditForm profileId={editingProfileId} onSaveSuccess={handleCloseEditModal} onCancel={handleCloseEditModal} />
-               </Box>
-           </Modal>
-       )}
+       <Modal
+        open={isEditModalOpen}
+        onClose={handleCloseEditModal} 
+        aria-labelledby="edit-profile-modal-title"
+        aria-describedby="edit-profile-modal-description"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Paper 
+          sx={{ 
+            p: { xs: 2, sm: 3, md: 4 }, 
+            width: { xs: '95%', sm: '90%', md: '800px', lg: '900px' }, // Aumentado el ancho para md y lg
+            maxWidth: '95vw', // Aumentado para permitir más ancho en pantallas muy grandes
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            borderRadius: '12px',
+            boxShadow: 24,
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography id="edit-profile-modal-title" variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>
+              Editar Perfil
+            </Typography>
+            <IconButton onClick={handleCloseEditModal} aria-label="Cerrar modal">
+              <XCircle />
+            </IconButton>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+          {editingProfileId ? (
+            <PerfilEditForm 
+              profileId={editingProfileId} 
+              onSaveSuccess={handleCloseEditModal} 
+              onCancel={handleCloseEditModal} 
+            />
+          ) : (
+            <Alert severity="info">Cargando datos del perfil o no se ha seleccionado un perfil...</Alert>
+          )}
+        </Paper>
+      </Modal>
 
        {/* --- Modal de Prueba (Reestructurado) --- */}
        <Modal
