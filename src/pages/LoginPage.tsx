@@ -16,7 +16,7 @@ const LoginPage: React.FC = () => {
     event.preventDefault(); // Prevenir recarga de página en submit de formulario
     if (username === 'admin' && password === 'admin') {
       localStorage.setItem('isAuthenticated', 'true');
-      navigate('/dashboard');
+      navigate('/equipos');
     } else {
       setError('Usuario o contraseña incorrectos');
     }
