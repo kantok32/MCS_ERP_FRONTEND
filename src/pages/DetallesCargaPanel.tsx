@@ -148,6 +148,44 @@ const getTasasDeCambioDesdeAPI = async (): Promise<{ eurUsd: number, usdClp: num
     }
 };
 
+// NUEVA FUNCIÓN HELPER PARA FORMATEAR PRECIOS EUR (VERSIÓN CORREGIDA Y ROBUSTA)
+const formatEurPriceDetalles = (value: number | string | null | undefined): string => {
+  if (value === null || value === undefined || String(value).trim() === '') return '-';
+
+  let numericValue: number;
+
+  if (typeof value === 'number') {
+    numericValue = value;
+  } else { // value is a string
+    let strValue = String(value).trim();
+    
+    strValue = strValue.replace(/EUR/gi, '').replace(/[^0-9.,-]/g, '').trim();
+
+    const hasComma = strValue.includes(',');
+    const hasPeriod = strValue.includes('.');
+
+    if (hasComma && hasPeriod) {
+        if (strValue.lastIndexOf(',') > strValue.lastIndexOf('.')) {
+            strValue = strValue.replace(/\./g, '').replace(',', '.');
+        } else {
+            strValue = strValue.replace(/,/g, '');
+        }
+    } else if (hasComma) {
+        strValue = strValue.replace(',', '.');
+    }
+    // No se necesita hacer nada si solo hay puntos, parseFloat lo maneja.
+    
+    numericValue = parseFloat(strValue);
+  }
+
+  if (isNaN(numericValue)) {
+    return '-';
+  }
+  
+  const roundedValue = Math.round(numericValue);
+  return `${roundedValue.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} EUR`;
+};
+
 export default function DetallesCargaPanel({
   itemsParaCotizar,
   onVolver,
@@ -446,15 +484,11 @@ export default function DetallesCargaPanel({
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td style={tdStyle}>{item.principal?.codigo_producto || '-'}</td>
-                      <td style={tdStyle}>{item.principal?.nombre_del_producto || '-'}</td>
-                      <td style={{ ...tdStyle, textAlign: 'right' }}>
-                        {item.principal?.datos_contables && typeof item.principal.datos_contables.costo_fabrica === 'number'
-                          ? `€${item.principal.datos_contables.costo_fabrica.toLocaleString('de-DE')} ${item.principal.datos_contables.divisa_costo || ''}`
-                          : (item.principal?.pf_eur ? `€${Number(item.principal.pf_eur).toLocaleString('de-DE')}` : '-')}
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: 'center' }}>{item.principal?.datos_contables?.fecha_cotizacion || '-'}</td>
+                    <tr className="bg-white">
+                      <td className="py-2 px-3">{item.principal.codigo_producto || '-'}</td>
+                      <td className="py-2 px-3">{item.principal.nombre_del_producto || '-'}</td>
+                      <td className="py-2 px-3 text-right">{item.principal.datos_contables?.fecha_cotizacion || '-'}</td>
+                      <td className="py-2 px-3 text-right font-semibold">{formatEurPriceDetalles(item.principal.pf_eur)}</td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
                         <button 
                           style={{ background: 'none', border: 'none', color: '#dc3545', cursor: 'pointer' }} 
@@ -487,18 +521,14 @@ export default function DetallesCargaPanel({
                           <th style={{ ...thStyle, textAlign: 'center', width: '70px' }}>Acción</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {item.opcionales.map((opcional, opcionalIndex) => (
-                          <tr key={opcional.codigo_producto || opcionalIndex}>
-                            <td style={tdStyle}>{opcional.codigo_producto || '-'}</td>
-                            <td style={tdStyle}>{opcional.nombre_del_producto || '-'}</td>
-                            <td style={{ ...tdStyle, textAlign: 'right' }}>
-                              {opcional.datos_contables && typeof opcional.datos_contables.costo_fabrica === 'number'
-                                ? `€${opcional.datos_contables.costo_fabrica.toLocaleString('de-DE')} ${opcional.datos_contables.divisa_costo || ''}`
-                                : (opcional.pf_eur ? `€${Number(opcional.pf_eur).toLocaleString('de-DE')}` : '-')}
-                            </td>
-                            <td style={{ ...tdStyle, textAlign: 'center' }}>{opcional.datos_contables?.fecha_cotizacion || '-'}</td>
-                            <td style={{ ...tdStyle, textAlign: 'center' }}>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {item.opcionales.map((opcional, opIndex) => (
+                          <tr key={opcional.codigo_producto || `opcional-${opIndex}`}>
+                            <td className="px-4 py-3 whitespace-nowrap">{opcional.codigo_producto || '-'}</td>
+                            <td className="px-4 py-3 whitespace-normal">{opcional.nombre_del_producto || '-'}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-right">{opcional.datos_contables?.fecha_cotizacion || '-'}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-right font-semibold">{formatEurPriceDetalles(opcional.pf_eur)}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-center">
                               <button 
                                 style={{ background: 'none', border: 'none', color: '#dc3545', cursor: 'pointer' }} 
                                 title="Eliminar Opcional"
