@@ -808,19 +808,32 @@ export default function PerfilesPanel() {
         console.log(`[PerfilesPanel] Duplicando perfil ID: ${profileId}`);
         const profileToDuplicate = perfiles.find(p => p._id === profileId);
         if (!profileToDuplicate) {
-            throw new Error('Perfil no encontrado');
+            throw new Error('Perfil no encontrado para duplicar');
         }
-        const newProfileData = {
-            ...profileToDuplicate,
+
+        // Create the new object for the API call, explicitly picking properties
+        const profileDataForSubmission: Omit<CostoPerfilData, '_id' | 'createdAt' | 'updatedAt'> = {
             nombre_perfil: `Copia de ${profileToDuplicate.nombre_perfil}`,
             descripcion: `Copia de ${profileToDuplicate.descripcion}`,
+            // Copy all other relevant fields from the original profile
+            descuento_fabrica_pct: profileToDuplicate.descuento_fabrica_pct,
+            buffer_eur_usd_pct: profileToDuplicate.buffer_eur_usd_pct,
+            buffer_usd_clp_pct: profileToDuplicate.buffer_usd_clp_pct,
+            tasa_seguro_pct: profileToDuplicate.tasa_seguro_pct,
+            margen_adicional_pct: profileToDuplicate.margen_adicional_pct,
+            descuento_cliente_pct: profileToDuplicate.descuento_cliente_pct,
+            costo_logistica_origen_eur: profileToDuplicate.costo_logistica_origen_eur,
+            flete_maritimo_usd: profileToDuplicate.flete_maritimo_usd,
+            recargos_destino_usd: profileToDuplicate.recargos_destino_usd,
+            costo_agente_aduana_usd: profileToDuplicate.costo_agente_aduana_usd,
+            gastos_portuarios_otros_usd: profileToDuplicate.gastos_portuarios_otros_usd,
+            transporte_nacional_clp: profileToDuplicate.transporte_nacional_clp,
+            derecho_advalorem_pct: profileToDuplicate.derecho_advalorem_pct,
+            iva_pct: profileToDuplicate.iva_pct,
         };
-        delete newProfileData._id;
-        delete newProfileData.createdAt;
-        delete newProfileData.updatedAt;
 
-        const newProfile = await api.createProfile(newProfileData);
-        console.log(`Perfil ${profileId} duplicado exitosamente desde la API.`, newProfile);
+        const newCreatedProfile = await api.createProfile(profileDataForSubmission);
+        console.log(`Perfil ${profileId} duplicado exitosamente desde la API.`, newCreatedProfile);
         loadPerfiles();
     } catch (err) {
         console.error(`[PerfilesPanel] Error duplicando perfil ${profileId}:`, err);

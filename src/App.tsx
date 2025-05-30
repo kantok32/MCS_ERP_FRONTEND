@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, Filter, X, ArrowLeft, ArrowRight, Check, Settings, Eye, List, Loader2, LayoutDashboard, FileCog, Users, Menu, Bell, User, SlidersHorizontal, ChevronDown, ChevronUp, UploadCloud, LogOut, History } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Search, Filter, X, ArrowLeft, ArrowRight, Check, Settings, Eye, List, Loader2, LayoutDashboard, FileCog, Users, Menu, Bell, User, SlidersHorizontal, ChevronDown, ChevronUp, UploadCloud, LogOut, History, RefreshCcw } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import ecoAllianceLogo from './assets/Logotipo_EAX-EA.png';
@@ -73,10 +73,13 @@ interface HeaderProps {
   logoPath: string;
   sidebarWidth: number;
   headerHeight: number;
-  onProfileClick: () => void; // Nueva prop para manejar el click en el perfil
+  username: string;
+  email: string;
+  onProfileClick: () => void;
+  onSimulateProfileChange: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ logoPath, sidebarWidth, headerHeight, onProfileClick }) => {
+const Header: React.FC<HeaderProps> = ({ logoPath, sidebarWidth, headerHeight, username, email, onProfileClick, onSimulateProfileChange }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -95,6 +98,7 @@ const Header: React.FC<HeaderProps> = ({ logoPath, sidebarWidth, headerHeight, o
     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
     borderBottom: '1px solid #e5e7eb',
     flexShrink: 0,
+    position: 'relative',
   };
 
   const logoContainerStyle: React.CSSProperties = {
@@ -126,17 +130,11 @@ const Header: React.FC<HeaderProps> = ({ logoPath, sidebarWidth, headerHeight, o
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    cursor: 'pointer', // Hacerlo clickeable
-    padding: '8px', // Añadir padding para mejor área de click
-    borderRadius: '6px', // Bordes redondeados
+    cursor: 'pointer',
+    padding: '8px',
+    borderRadius: '6px',
   };
   
-  // Estilo para hover, podría estar en un :hover de CSS o manejado con estado si es más complejo
-  // Por ahora, lo menciono, pero para simplicidad lo omito en los estilos inline directos
-  // const userInfoContainerHoverStyle: React.CSSProperties = {
-  //   backgroundColor: '#f3f4f6', // Un gris claro para el hover
-  // };
-
   const userInfoTextStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
@@ -157,21 +155,35 @@ const Header: React.FC<HeaderProps> = ({ logoPath, sidebarWidth, headerHeight, o
     <header style={headerStyle}>
       <div style={logoContainerStyle}>
         <img src={logoPath} alt="Logo" style={logoStyle} />
+        <button 
+          onClick={onSimulateProfileChange} 
+          title="Simular cambio de perfil (desarrollo)"
+          style={{
+            position: 'absolute',
+            left: '5px',
+            top: '5px',
+            background: 'transparent',
+            border: 'none',
+            padding: '5px',
+            cursor: 'pointer',
+            opacity: 0.6,
+          }}
+        >
+          <RefreshCcw size={14} color="#64748b" />
+        </button>
       </div>
       <div style={rightSectionStyle}>
-        {/* <Bell size={20} style={iconStyle} /> YA NO ESTA LA CAMPANA */}
-        {/* User Info Block - ahora clickeable */}
         <div 
           style={userInfoContainerStyle} 
           onClick={onProfileClick} 
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'} // Efecto hover simple
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'} // Restaurar al salir
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
            <div style={userInfoTextStyle}>
-             <span style={userNameStyle}>ADMIN</span>
-             <span style={userEmailStyle}>Ecoalliance33@gmail.com</span>
+             <span style={userNameStyle}>{username}</span>
+             <span style={userEmailStyle}>{email}</span>
            </div>
-           <User size={24} style={{...iconStyle, color: '#4b5563', cursor: 'default'}} /> {/* cursor default aquí porque el div padre es el clickeable */}
+           <User size={24} style={{...iconStyle, color: '#4b5563', cursor: 'default'}} />
         </div>
         <span title="Cerrar Sesión" onClick={handleLogout} style={{ cursor: 'pointer' }}>
           <LogOut size={20} style={iconStyle} />
@@ -181,6 +193,11 @@ const Header: React.FC<HeaderProps> = ({ logoPath, sidebarWidth, headerHeight, o
   );
 };
 // --- End Header Component ---
+
+export interface ProfileOutletContextType {
+    userProfile: { username: string; email: string; };
+    handleProfileUpdate: (newUsername: string, newEmail: string) => void;
+}
 
 // Versión funcional con diseño simplificado
 export default function App() {
@@ -194,12 +211,33 @@ export default function App() {
     catch (e) { console.error('Error leyendo sessionStorage:', e); return false; }
   });
 
-  // Estado para el modal de perfil
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState({
+    username: 'ADMIN',
+    email: 'Ecoalliance33@gmail.com',
+  });
 
-  // Función para abrir/cerrar el modal de perfil
-  const toggleProfileModal = () => {
-    setIsProfileModalOpen(!isProfileModalOpen);
+  const mockProfiles = [
+    { username: 'ADMIN', email: 'Ecoalliance33@gmail.com' },
+    { username: 'USER_DEMO', email: 'demo@example.com' },
+    { username: 'TEST_USER', email: 'test@example.com' },
+    { username: 'Juan Perez', email: 'jperez@cliente.com' },
+  ];
+  const [currentMockProfileIndex, setCurrentMockProfileIndex] = useState(0);
+
+  const handleSimulateProfileChange = () => {
+    const nextIndex = (currentMockProfileIndex + 1) % mockProfiles.length;
+    setUserProfile(mockProfiles[nextIndex]);
+    setCurrentMockProfileIndex(nextIndex);
+  };
+
+  const handleProfileUpdate = (newUsername: string, newEmail: string) => {
+    setUserProfile({ username: newUsername, email: newEmail });
+    console.log("Perfil actualizado desde página a:", { newUsername, newEmail });
+    navigate('/'); // Navegar a la página de inicio después de actualizar
+  };
+
+  const handleNavigateToProfileEdit = () => {
+    navigate('/editar-perfil');
   };
 
   // --- Autenticación Effect ---
@@ -360,6 +398,8 @@ export default function App() {
     );
   }
 
+  const outletContextValue: ProfileOutletContextType = { userProfile, handleProfileUpdate };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -370,7 +410,10 @@ export default function App() {
             logoPath={ecoAllianceLogo} 
             sidebarWidth={SIDEBAR_WIDTH} 
             headerHeight={HEADER_HEIGHT} 
-            onProfileClick={toggleProfileModal}
+            username={userProfile.username}
+            email={userProfile.email}
+            onProfileClick={handleNavigateToProfileEdit}
+            onSimulateProfileChange={handleSimulateProfileChange}
           />
           <div style={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
             <div style={sidebarStyle}>
@@ -459,7 +502,7 @@ export default function App() {
               </nav>
             </div>
             <div style={contentStyle}>
-              <Outlet />
+              <Outlet context={outletContextValue} />
             </div>
           </div>
           {/* ChatWidget y ProfileEditModal se mueven fuera de este div */}
@@ -467,10 +510,6 @@ export default function App() {
         
         {/* Elementos que deben estar por encima de todo y relativos al viewport */}
         <ChatWidget ref={chatWidgetRef} onBubbleClick={handleOpenChatClick} />
-        <ProfileEditModal 
-          isOpen={isProfileModalOpen} 
-          onClose={toggleProfileModal} 
-        />
       </>
     </ThemeProvider>
   );

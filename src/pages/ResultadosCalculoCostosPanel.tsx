@@ -45,35 +45,57 @@ const formatCurrency = (value: number | null | undefined, currencySymbol: string
 
 const formatCLP = (value: number | null | undefined): string => {
   if (value === null || value === undefined || isNaN(value)) return '--';
-  return `$ ${value.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`; // Sin decimales para CLP general
-};
-
-const formatCLPConDecimales = (value: number | null | undefined): string => {
-  if (value === null || value === undefined || isNaN(value)) return '--';
-  return `$ ${value.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  let numberPart = value.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (numberPart.endsWith(',00')) {
+    numberPart = numberPart.substring(0, numberPart.length - 3);
+  }
+  return `$ ${numberPart}`; 
 };
 
 const formatGenericCurrency = (value: number | null | undefined, currency: 'USD' | 'EUR', digits = 2): string => {
   if (value === null || value === undefined || isNaN(value)) return '--';
-  const options: Intl.NumberFormatOptions = {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits
-  };
-  // Usar 'en-US' para USD/EUR para asegurar el símbolo correcto y formato de punto/coma
-  // o 'de-DE' para EUR si se prefiere el formato europeo.
-  return value.toLocaleString(currency === 'EUR' ? 'de-DE' : 'en-US', options);
+  
+  let numberPart = value.toLocaleString('es-ES', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  // Apply stripping rule if digits is 2 (default for currencies)
+  if (digits === 2 && numberPart.endsWith(',00')) {
+    numberPart = numberPart.substring(0, numberPart.length - 3);
+  }
+  
+  if (currency === 'EUR') {
+    return `${numberPart} €`;
+  } else { // USD
+    return `$${numberPart}`;
+  }
 };
 
-const formatPercentDisplay = (value: number | null | undefined, digits = 4): string => {
+const formatPercentDisplay = (value: number | null | undefined, digits = 0): string => {
   if (value === null || value === undefined || isNaN(value)) return '--';
   return `${(value * 100).toFixed(digits)}%`;
 };
 
-const formatNumber = (value: number | null | undefined, digits = 4): string => {
+const formatNumber = (value: number | null | undefined, digits = 2): string => {
     if (value === null || value === undefined || isNaN(value)) return '--';
-    return value.toFixed(digits);
+    let formattedNumber = value.toLocaleString('es-ES', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    // If digits is 2 (common case for this rule) and formatted number ends with ',00', strip it.
+    if (digits === 2 && formattedNumber.endsWith(',00')) {
+        formattedNumber = formattedNumber.substring(0, formattedNumber.length - 3);
+    }
+    return formattedNumber;
+};
+
+// Helper function to split camelCase/PascalCase and capitalize
+const splitAndCapitalizeKey = (key: string): string => {
+  if (!key) return key;
+  const spacedKey = key.replace(/_/g, ' ')
+                       .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+                       .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
+  return spacedKey.charAt(0).toUpperCase() + spacedKey.slice(1);
+};
+
+// Helper function to capitalize the first letter of a string
+const capitalizeFirstLetter = (str: string): string => {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
 // --- Labels para los campos (para que coincidan con tu ejemplo) ---
@@ -81,11 +103,11 @@ const inputLabels: Record<string, string> = {
     anoCotizacion: "Año Cotización",
     anoEnCurso: "Año en Curso",
     costoFabricaOriginalEUR: "Costo Fábrica Original EUR",
-    tipoCambioEurUsdActual: "TC EUR/USD Actual (Input)", // Distinguir del aplicado
-    tipoCambioUsdClpActual: "TC USD/CLP Actual (Input)", // Distinguir del aplicado
+    tipoCambioEurUsdActual: "TC EUR/USD Actual (Input)",
+    tipoCambioUsdClpActual: "TC USD/CLP Actual (Input)",
     buffer_eur_usd_pct: "Buffer EUR/USD (Perfil)",
     descuento_fabrica_pct: "Descuento Fábrica (Perfil)",
-    costo_logistica_origen_eur: "Costo Origen EUR (Perfil)", // Nombre del campo en CostoPerfil.js
+    costo_logistica_origen_eur: "Costo Origen EUR (Perfil)",
     flete_maritimo_usd: "Flete Marítimo USD (Perfil)",
     recargos_destino_usd: "Recargos Destino USD (Perfil)",
     tasa_seguro_pct: "Tasa Seguro % (Perfil)",
@@ -95,8 +117,8 @@ const inputLabels: Record<string, string> = {
     buffer_usd_clp_pct: "Buffer USD/CLP % (Perfil)",
     margen_adicional_pct: "Margen Adicional % (Perfil)",
     descuento_cliente_pct: "Descuento Cliente % (Perfil)",
-    derecho_advalorem_pct: "Derecho AdValorem % (Perfil)", // Aunque se usa 0.06, el perfil lo tiene
-    iva_pct: "IVA % (Perfil)" // Aunque se usa 0.19, el perfil lo tiene
+    derecho_advalorem_pct: "Derecho AdValorem % (Perfil)",
+    iva_pct: "IVA % (Perfil)"
 };
 
 const apiValuesLabels: Record<string, string> = {
@@ -106,25 +128,27 @@ const apiValuesLabels: Record<string, string> = {
 
 const sectionLabels: Record<string, Record<string, string>> = {
     costo_producto: {
+        sectionTitle: "Costo Producto",
         factorActualizacion: "Factor Actualización",
         costoFabricaActualizadoEUR: "Costo Fáb. Act. EUR (Antes Desc.)",
-        costoFinalFabricaEUR_EXW: "Costo Fábrica Descontado EUR EXW", // Ajustado para tu ejemplo
+        costoFinalFabricaEUR_EXW: "Costo Fábrica Descontado EUR EXW",
         tipoCambioEurUsdAplicado: "TC EUR/USD Aplicado",
         costoFinalFabricaUSD_EXW: "Costo Final Fáb. USD (EXW)"
     },
     logistica_seguro: {
+        sectionTitle: "Logística Seguro",
         costosOrigenUSD: "Costos en Origen (USD)",
         costoTotalFleteManejosUSD: "Costo Total Flete y Manejos (USD)",
         baseParaSeguroUSD: "Base para Seguro (CFR Aprox - USD)",
         primaSeguroUSD: "Prima Seguro (USD)",
-        totalTransporteSeguroEXW_USD: "Total Transporte y Seguro EXW (USD)" // Nombre largo pero descriptivo
+        totalTransporteSeguroEXW_USD: "Total Transporte y Seguro EXW (USD)"
     },
     importacion: {
         valorCIF_USD: "Valor CIF (USD)",
         derechoAdvaloremUSD: "Derecho AdValorem (USD)",
         baseIvaImportacionUSD: "Base IVA Importación (USD)",
         ivaImportacionUSD: "IVA Importación (USD)",
-        totalCostosImportacionDutyFeesUSD: "Total Costos Imp. (Duty+Fees) (USD)" // Nombre largo
+        totalCostosImportacionDutyFeesUSD: "Total Costos Imp. (Duty+Fees) (USD)"
     },
     landed_cost: {
         transporteNacionalUSD: "Transporte Nacional (USD)",
@@ -161,24 +185,43 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
     if (!inputs || !calculados) {
         return <Alert severity="warning">Datos del cálculo detallado incompletos o en formato inesperado.</Alert>;
     }
+
+    const preciosClienteCLPKeys = [
+        'descuentoclienteclp',
+        'precionetoventafinalclp',
+        'ivaventaclp',
+        'precioventatotalclienteclp',
+        'precio_lista_final_clp_iva_incl' // Adding this key from the consolidated display too
+    ];
+
     const formatValue = (value: any, key: string): string => {
-                    if (typeof value === 'number') {
-            if (key.toLowerCase().includes('_clp')) return formatCLP(value);
-            else if (key.toLowerCase().endsWith('_eur')) return formatGenericCurrency(value, 'EUR');
-            else if (key.toLowerCase().endsWith('_usd')) return formatGenericCurrency(value, 'USD');
-            else if (key.toLowerCase().includes('_pct') || key.toLowerCase().startsWith('tasa_') || key.toLowerCase().includes('factor') || key.toLowerCase().includes('margen_adicional_pct') || key.toLowerCase().includes('descuento_cliente_pct')) return formatPercentDisplay(value);
-            else if (key.toLowerCase().includes('tipo_cambio') || key.toLowerCase().includes('tipocambio')) return formatNumber(value, 6);
-            else return formatNumber(value, 2);
-                    } else if (value === undefined && inputs[key] !== undefined) {
-                        const inputValue = inputs[key];
-                        if (typeof inputValue === 'number') {
+        const lowerKey = key.toLowerCase();
+        if (typeof value === 'number') {
+            if (lowerKey === 'anocotizacion' || lowerKey === 'anoencurso') return formatNumber(value, 0);
+            if (lowerKey === 'tipocambioeurusdaplicado' || lowerKey === 'tipocambiousdclpaplicado') return formatNumber(value, 2); 
+            
+            // Specific formatting for Precios Cliente CLP fields
+            if (preciosClienteCLPKeys.includes(lowerKey)) {
+                return `$ ${formatNumber(value, 0)}`;
+            }
+            
+            // Check for general CLP fields (must end with _clp or be exactly 'clp' for safety, and not be special keys handled above)
+            if (lowerKey.endsWith('_clp') || lowerKey === 'clp') return formatCLP(value);
+            else if (lowerKey.endsWith('_eur')) return formatGenericCurrency(value, 'EUR'); 
+            else if (lowerKey.endsWith('_usd')) return formatGenericCurrency(value, 'USD'); 
+            else if (lowerKey.includes('_pct') || lowerKey.startsWith('tasa_') || lowerKey.includes('factor') || lowerKey.includes('margen_adicional_pct') || lowerKey.includes('descuento_cliente_pct')) return formatPercentDisplay(value); 
+            else if (lowerKey.includes('tipo_cambio') || lowerKey.includes('tipocambio')) return formatNumber(value, 6); 
+            else return formatNumber(value, 2); 
+        } else if (value === undefined && inputs && inputs[key] !== undefined) { 
+            const inputValue = inputs[key];
+            if (typeof inputValue === 'number') {
                 if (key.toLowerCase().includes('_clp')) return formatCLP(inputValue);
                 else if (key.toLowerCase().endsWith('_eur')) return formatGenericCurrency(inputValue, 'EUR');
                 else if (key.toLowerCase().endsWith('_usd')) return formatGenericCurrency(inputValue, 'USD');
                 else if (key.toLowerCase().includes('_pct') || key.toLowerCase().startsWith('tasa_')) return formatPercentDisplay(inputValue/100);
                 else return formatNumber(inputValue, 2);
-                        } else {
-                return String(inputValue); 
+            } else {
+                return String(inputValue);
             }
         }
         return '--';
@@ -190,31 +233,20 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
                 Detalle del Cálculo (Perfil: {displayProfileName} - ID: {displayProfileId})
             </Typography>
 
-            {/* Sección de Inputs Utilizados */}
             <Accordion sx={{ mb: 1 }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography sx={{ width: '40%', flexShrink: 0, fontWeight: 'medium' }}>Campo (Input)</Typography>
-                    <Typography sx={{ color: 'text.secondary' }}>Valor Utilizado</Typography>
+                    <Typography sx={{ width: '40%', flexShrink: 0, fontWeight: 'medium' }}>Parámetros del Perfil Aplicado</Typography>
+                    <Typography sx={{ color: 'text.secondary' }}>Valores</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                     <Grid container spacing={1}>
-                        {Object.entries(inputs).map(([key, value]) => (
-                            <React.Fragment key={`input-${key}`}>
-                                <Grid item xs={6}><Typography variant="body2"><em>{inputLabels[key] || key}:</em></Typography></Grid>
-                                <Grid item xs={6}><Typography variant="body2">{formatValue(value, key)}</Typography></Grid>
-                            </React.Fragment>
-                        ))}
-                        {/* Mostrar los parámetros del perfil que se usaron */}
                         {profile && (
                             <>
-                                <Grid item xs={12}><Typography variant="subtitle2" sx={{ mt: 1 }}>Parámetros del Perfil Aplicado:</Typography></Grid>
                                 {Object.entries(profile).map(([key, value]) => {
-                                    // No mostrar _id, nombre_perfil, descripcion_perfil aquí si ya se muestran arriba o no son numéricos relevantes
                                     if (key === '_id' || key === 'nombre_perfil' || key === 'descripcion_perfil' || key === 'createdAt' || key === 'updatedAt' || key === '__v' || key === 'activo') {
                                         return null;
                                     }
-                                    // Si es un campo _pct, mostrar como porcentaje
-                                    const displayValue = key.endsWith('_pct') ? `${(Number(value) * 100).toFixed(2)}%` : formatValue(value, key);
+                                    const displayValue = key.endsWith('_pct') ? formatPercentDisplay(Number(value)) : formatValue(value, key);
                                     return (
                                         <React.Fragment key={`profile-param-${key}`}>
                                             <Grid item xs={6}><Typography variant="body2" color="text.secondary"><em>{inputLabels[key] || key}:</em></Typography></Grid>
@@ -224,19 +256,41 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
                                 })}
                             </>
                         )}
+                        {inputs && (
+                            <>
+                                {inputs.anoCotizacion !== undefined && (
+                                    <React.Fragment key="input-anoCotizacion">
+                                        <Grid item xs={6}><Typography variant="body2" color="text.secondary"><em>{inputLabels.anoCotizacion || 'Año Cotización'}:</em></Typography></Grid>
+                                        <Grid item xs={6}><Typography variant="body2" color="text.secondary">{formatValue(inputs.anoCotizacion, 'anoCotizacion')}</Typography></Grid>
+                                    </React.Fragment>
+                                )}
+                                {inputs.anoEnCurso !== undefined && (
+                                    <React.Fragment key="input-anoEnCurso">
+                                        <Grid item xs={6}><Typography variant="body2" color="text.secondary"><em>{inputLabels.anoEnCurso || 'Año en Curso'}:</em></Typography></Grid>
+                                        <Grid item xs={6}><Typography variant="body2" color="text.secondary">{formatValue(inputs.anoEnCurso, 'anoEnCurso')}</Typography></Grid>
+                                    </React.Fragment>
+                                )}
+                                {inputs.costoFabricaOriginalEUR !== undefined && (
+                                    <React.Fragment key="input-costoFabricaOriginalEUR">
+                                        <Grid item xs={6}><Typography variant="body2" color="text.secondary"><em>{inputLabels.costoFabricaOriginalEUR || 'Costo Fábrica Original EUR'}:</em></Typography></Grid>
+                                        <Grid item xs={6}><Typography variant="body2" color="text.secondary">{formatValue(inputs.costoFabricaOriginalEUR, 'costoFabricaOriginalEUR')}</Typography></Grid>
+                                    </React.Fragment>
+                                )}
+                            </>
+                        )}
                     </Grid>
                 </AccordionDetails>
             </Accordion>
 
-            {/* Sección de Resultados Calculados por Etapa */}
             {Object.entries(calculados).map(([stageName, stageValues]) => (
                 <Accordion key={stageName} sx={{ mb: 1 }}>
                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Typography sx={{ width: '40%', flexShrink: 0, fontWeight: 'medium' }}>{apiValuesLabels[stageName] || stageName.replace(/_/g, ' ')}</Typography>
-                        {/* Mostrar algún valor consolidado si aplica, ej: Precio Lista Final CLP */}
+                        <Typography sx={{ width: '40%', flexShrink: 0, fontWeight: 'medium' }}>
+                            {sectionLabels[stageName]?.sectionTitle || splitAndCapitalizeKey(stageName)}
+                        </Typography>
                         {stageName === "PRECIOS_CLIENTE" && stageValues.precio_lista_final_clp_iva_incl && (
                              <Typography sx={{ color: 'text.secondary' }}>
-                                Precio Lista Final: {formatValue(stageValues.precio_lista_final_clp_iva_incl, 'clp')}
+                                Precio Lista Final: {formatValue(stageValues.precio_lista_final_clp_iva_incl, 'precio_lista_final_clp_iva_incl')}
                             </Typography>
                         )}
                     </AccordionSummary>
@@ -244,7 +298,9 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
                         <Grid container spacing={1}>
                             {Object.entries(stageValues).map(([key, value]) => (
                                 <React.Fragment key={`${stageName}-${key}`}>
-                                    <Grid item xs={6}><Typography variant="body2"><em>{apiValuesLabels[key] || key.replace(/_/g, ' ')}:</em></Typography></Grid>
+                                    <Grid item xs={6}><Typography variant="body2"><em>
+                                        {sectionLabels[stageName]?.[key] || apiValuesLabels[key] || splitAndCapitalizeKey(key)}:
+                                    </em></Typography></Grid>
                                     <Grid item xs={6}><Typography variant="body2">{formatValue(value, key)}</Typography></Grid>
                                 </React.Fragment>
                             ))}
@@ -257,7 +313,6 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
     );
 };
 
-// --- Nueva función para llamar al API de cálculo --- (Modificada)
 const fetchCalculoDetallado = async (
   producto: Producto,
   _costoFabricaOriginalEUR: number,
@@ -268,29 +323,23 @@ const fetchCalculoDetallado = async (
   nombrePerfil: string,
   perfilesList: CostoPerfilData[]
 ): Promise<CalculationResult> => {
-  // Extraer los datos correctamente del producto
-  // 1. costo_fabrica
   let costoFabricaOriginalEUR = producto.datos_contables?.costo_fabrica;
   if (costoFabricaOriginalEUR === undefined || costoFabricaOriginalEUR === null) {
-    // fallback a nivel raíz
     costoFabricaOriginalEUR = (producto as any).costo_fabrica;
   }
   if (costoFabricaOriginalEUR === undefined || costoFabricaOriginalEUR === null) {
     console.warn('[fetchCalculoDetallado] costo_fabrica no encontrado para producto', producto);
     costoFabricaOriginalEUR = 0;
   }
-  // 2. fecha_cotizacion
   let fechaCotizacionStr = producto.datos_contables?.fecha_cotizacion;
   if (!fechaCotizacionStr) {
     fechaCotizacionStr = (producto as any).fecha_cotizacion;
   }
-  // 3. codigo_producto
   let codigo_producto = producto.codigo_producto || (producto as any).Codigo_Producto;
   if (!codigo_producto) {
     console.warn('[fetchCalculoDetallado] codigo_producto no encontrado para producto', producto);
     codigo_producto = '';
   }
-  // Procesar año de cotización
   let parsedYear: number | undefined;
   if (fechaCotizacionStr && /^\d{4}$/.test(fechaCotizacionStr as string)) {
     parsedYear = parseInt(fechaCotizacionStr as string, 10);
@@ -304,7 +353,6 @@ const fetchCalculoDetallado = async (
   }
   const anoCotizacion = parsedYear !== undefined ? parsedYear : anoEnCurso - 1;
 
-  // Obtener el perfil actual para asegurar que usamos la tasa de seguro correcta
   const perfilActual = perfilesList.find(p => p._id === profileId);
   if (!perfilActual) {
     console.error('[fetchCalculoDetallado] No se encontró el perfil con ID:', profileId);
@@ -316,9 +364,9 @@ const fetchCalculoDetallado = async (
     anoCotizacion: anoCotizacion, 
     anoEnCurso: anoEnCurso,
     costoFabricaOriginalEUR: costoFabricaOriginalEUR,
-    tipoCambioEurUsdActual: tcEurUsd, // Usar el tipo de cambio obtenido de la API
+    tipoCambioEurUsdActual: tcEurUsd,
     codigo_producto: codigo_producto,
-    tasa_seguro_pct: perfilActual.tasa_seguro_pct, // Usar la tasa de seguro del perfil
+    tasa_seguro_pct: perfilActual.tasa_seguro_pct,
   };
 
   const API_BASE_URL = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api';
@@ -354,7 +402,6 @@ const fetchCalculoDetallado = async (
   }
 };
 
-// Nueva función para transformar los datos para ConfiguracionPanel
 function transformarLineasParaConfiguracion(lineas: LineaDeTrabajoConCosto[], nombrePerfilFallback?: string): Record<string, CalculationResult> {
   const resultados: Record<string, CalculationResult> = {};
   lineas.forEach(linea => {
@@ -420,7 +467,6 @@ export default function ResultadosCalculoCostosPanel() {
 
       setPerfilesList(data);
       
-      // Intentar seleccionar el perfil inicial
       let initialProfileIdToSelect = state?.selectedProfileId || '';
       if (!initialProfileIdToSelect && data && data.length > 0) {
         initialProfileIdToSelect = data[0]._id;
@@ -443,13 +489,10 @@ export default function ResultadosCalculoCostosPanel() {
       let errorMessage = "No se pudieron cargar los perfiles de costo.";
       
       if (err.response) {
-        // Error de respuesta del servidor
         errorMessage = err.response.data?.message || `Error del servidor: ${err.response.status}`;
       } else if (err.request) {
-        // Error de red
         errorMessage = "Error de conexión. Por favor, verifique su conexión a internet.";
       } else {
-        // Otro tipo de error
         errorMessage = err.message || errorMessage;
       }
       
@@ -475,18 +518,15 @@ export default function ResultadosCalculoCostosPanel() {
       const data = await response.json();
       console.log('[ResultadosCalculoCostosPanel] Respuesta del webhook:', data);
 
-      // Verificar si la respuesta tiene el formato esperado
       if (!data || typeof data !== 'object') {
         throw new Error('La respuesta del webhook no es un objeto válido');
       }
 
-      // Verificar si tenemos los valores necesarios
       if (!data.Valor_Euro || !data.Valor_Dolar) {
         console.error('[ResultadosCalculoCostosPanel] Datos recibidos:', data);
         throw new Error('El objeto no contiene los valores esperados (Valor_Euro o Valor_Dolar)');
       }
 
-      // Calcular el tipo de cambio EUR/USD
       const valorEuro = parseFloat(data.Valor_Euro);
       const valorDolar = parseFloat(data.Valor_Dolar);
       
@@ -502,10 +542,9 @@ export default function ResultadosCalculoCostosPanel() {
     } catch (error) {
       console.error('[ResultadosCalculoCostosPanel] Error al obtener tipo de cambio EUR/USD:', error);
       setErrorCarga('Error al obtener el tipo de cambio EUR/USD. Por favor, intente nuevamente.');
-      // Mantener el último valor válido si existe
       if (!tipoCambioEurUsd) {
         console.warn('[ResultadosCalculoCostosPanel] Usando valor por defecto para tipo de cambio EUR/USD');
-        setTipoCambioEurUsd(1.117564); // Valor por defecto como fallback
+        setTipoCambioEurUsd(1.117564);
       }
     } finally {
       setIsLoadingTipoCambio(false);
@@ -559,7 +598,6 @@ export default function ResultadosCalculoCostosPanel() {
     const nuevasLineas = await Promise.all(
       lineas.map(async (linea) => {
         try {
-          // Calcular para el producto principal
           const detalleCalculoPrincipal = await fetchCalculoDetallado(
             linea.principal,
             linea.principal.datos_contables?.costo_fabrica || 0,
@@ -571,21 +609,20 @@ export default function ResultadosCalculoCostosPanel() {
             perfilesList
         );
 
-          // Calcular para los opcionales
-          const detallesCalculoOpcionales = await Promise.all(
-            linea.opcionales.map(opcional =>
-              fetchCalculoDetallado(
-                opcional,
-                opcional.datos_contables?.costo_fabrica || 0,
-                opcional.datos_contables?.fecha_cotizacion as string | Date | undefined,
-                currentProfileData._id,
-                anoActualGlobal,
-                tipoCambioEurUsd,
-                currentProfileData.nombre_perfil,
-                perfilesList
-              )
-              )
-            );
+        const detallesCalculoOpcionales = await Promise.all(
+          linea.opcionales.map(opcional =>
+            fetchCalculoDetallado(
+              opcional,
+              opcional.datos_contables?.costo_fabrica || 0,
+              opcional.datos_contables?.fecha_cotizacion as string | Date | undefined,
+              currentProfileData._id,
+              anoActualGlobal,
+              tipoCambioEurUsd,
+              currentProfileData.nombre_perfil,
+              perfilesList
+            )
+            )
+          );
 
         return {
             ...linea,
@@ -600,7 +637,6 @@ export default function ResultadosCalculoCostosPanel() {
       })
     );
 
-    // Filtrar las líneas que fallaron (que son null si el cálculo de esa línea falló)
     const lineasValidas = nuevasLineas.filter((linea): linea is LineaDeTrabajoConCosto => linea !== null) as LineaDeTrabajoConCosto[];
 
     if (lineasValidas.length === 0) {
@@ -634,18 +670,17 @@ export default function ResultadosCalculoCostosPanel() {
     setSaveErrorMessage(null);
     setSavedCalculoId(null);
     setErrorCarga(null);
-    setLatestCalculatedResults(null); // Reset previous results before new calculation
+    setLatestCalculatedResults(null);
 
     const nuevasLineasConDetalles = await realizarCalculoDetallado(lineasActualesParaCalculo);
 
     if (!nuevasLineasConDetalles) {
-      // errorCarga should be set by realizarCalculoDetallado or its callers
       setSaveErrorMessage(errorCarga || "Falló la etapa de cálculo."); 
     } else {
       setLineasCalculadas(nuevasLineasConDetalles);
       const resultadosTransformados = transformarLineasParaConfiguracion(nuevasLineasConDetalles, currentProfileData.nombre_perfil);
       setLatestCalculatedResults(resultadosTransformados);
-      setSaveSuccessMessage("Cálculo realizado con éxito. Puede proceder a guardar."); // Inform user
+      setSaveSuccessMessage("Cálculo realizado con éxito. Puede proceder a guardar.");
     }
     setIsCalculating(false);
   };
@@ -723,7 +758,7 @@ export default function ResultadosCalculoCostosPanel() {
     setSavedCalculoId(null);
     setIsCalculating(false); 
     setLatestCalculatedResults(null);
-    obtenerTipoCambioEurUsd(); // Actualizar tipo de cambio al cambiar de perfil
+    obtenerTipoCambioEurUsd();
   };
 
   const toggleExpandItem = (key: string) => {
@@ -743,7 +778,6 @@ export default function ResultadosCalculoCostosPanel() {
         setSaveErrorMessage("No hay un perfil seleccionado."); 
         return;
     }
-    // Navegar a la página de configuración de datos de empresa/cotización
     navigate('/configuracion-panel', {
         state: {
         itemsParaCotizar: lineasCalculadas.map(linea => ({
@@ -847,48 +881,25 @@ export default function ResultadosCalculoCostosPanel() {
                   <Typography variant="h6" sx={{ flexGrow: 1 }}>
                     {linea.principal.nombre_del_producto || 'Producto Principal'}
                     {linea.opcionales.length > 0 && 
-                        <Chip label={`${linea.opcionales.length} opcional(es)`} size="small" sx={{ ml: 1, backgroundColor: '#e0e0e0'}} />
-                    }
+                        <Chip label={`${linea.opcionales.length} opcionales`} />}
                   </Typography>
-                  {tieneDetalles && linea.detalleCalculoPrincipal?.calculados?.precios_cliente?.precioVentaTotalClienteCLP !== undefined ? (
-                     <Typography variant="h6" color="secondary" sx={{ mr: 1, fontWeight: 'bold' }}>
-                        {formatCLP(linea.detalleCalculoPrincipal.calculados.precios_cliente.precioVentaTotalClienteCLP)}
-                     </Typography>
-                  ) : currentProfileData && !isCalculating ? (
-                    <Chip icon={<AlertTriangle size={16}/>} label="Requiere Cálculo" color="warning" size="small" sx={{mr:1}}/>
-                  ) : !currentProfileData ? (
-                    <Chip icon={<CloudOff size={16}/>} label="Seleccione Perfil" color="info" size="small" sx={{mr:1}}/>
-                  ) : null}
                 </Box>
               </AccordionSummary>
-              <AccordionDetails sx={{ borderTop: '1px solid rgba(0, 0, 0, .125)', p: {xs: 1, sm: 2} }}>
-                <Typography variant="subtitle1" gutterBottom sx={{mt:1, fontWeight: 'medium' }}>Producto Principal: {linea.principal.nombre_del_producto}</Typography>
-                {linea.detalleCalculoPrincipal ? (
+              <AccordionDetails>
+                {tieneDetalles && (
+                  <>
                     <RenderResultDetails detalle={linea.detalleCalculoPrincipal} profile={currentProfileData} />
-                ) : (
-                    <Typography sx={{my:1}}>{currentProfileData ? (isCalculating ? 'Calculando...' : 'Presione "Calcular y Guardar" para ver detalles.') : 'Seleccione un perfil para habilitar el cálculo.'}</Typography>
-                )}
-
-                {linea.opcionales.length > 0 && (
-                    <Box sx={{ mt: 3 }}>
-                        <Typography variant="subtitle1" gutterBottom sx={{fontWeight: 'medium' }}>Productos Opcionales:</Typography>
-                        {linea.opcionales.map((opcional, opcIndex) => (
-                            <Box key={opcional.codigo_producto || `opc-${opcIndex}`} sx={{ mb: 2, pl: 2, borderLeft: '3px solid #eee' }}>
-                                <Typography variant="subtitle2" gutterBottom sx={{color: 'text.secondary'}}>{opcional.nombre_del_producto}</Typography>
-                                {linea.detallesCalculoOpcionales && linea.detallesCalculoOpcionales[opcIndex] ? (
-                                    <RenderResultDetails detalle={linea.detallesCalculoOpcionales[opcIndex]} profile={currentProfileData} />
-                                ) : (
-                                    <Typography sx={{my:1}}>{currentProfileData ? (isCalculating ? 'Calculando...' : 'Presione "Calcular y Guardar" para ver detalles.') : 'Seleccione un perfil para habilitar el cálculo.'}</Typography>
-                                )}
-                            </Box>
-                        ))}
-                    </Box>
+                    {linea.detallesCalculoOpcionales.map((detalleOpcional, idx) => (
+                      <RenderResultDetails key={`opcional-${idx}`} detalle={detalleOpcional} profile={currentProfileData} />
+                    ))}
+                  </>
                 )}
               </AccordionDetails>
             </Accordion>
           );
         })}
 
+        {/* Restored Action Buttons Box */}
         <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mt: 3, mb:1, gap: 2 }}>
           <Button
             variant="outlined"

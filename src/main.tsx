@@ -19,6 +19,7 @@ import LoginPage from './pages/LoginPage'
 import HistorialPage from './pages/HistorialPage'
 import HistorialDetallePage from './pages/HistorialDetallePage'
 import DocumentoHtmlPage from './pages/DocumentoHtmlPage'
+import ProfileEditPage from './pages/ProfileEditPage'
 // import CargaManualEquiposPage from './pages/CargaManualEquiposPage'
 // import DetallesEnvioPanel from './pages/DetallesEnvioPanel'; // Comentado si no se usa directamente aquí
 
@@ -77,6 +78,7 @@ const AnimatedRoutes = () => {
           <Route path="historial" element={<AnimatedPage><HistorialPage /></AnimatedPage>} />
           <Route path="historial/:id" element={<AnimatedPage><HistorialDetallePage /></AnimatedPage>} />
           <Route path="/documento_html" element={<DocumentoHtmlPage />} />
+          <Route path="editar-perfil" element={<AnimatedPage><ProfileEditPage currentUser={{username: 'Hardcoded', email: 'hardcoded@mail.com'}} onProfileUpdate={() => console.log('update fired')} /></AnimatedPage>} />
         </Route>
       </Routes>
     </AnimatePresence>
