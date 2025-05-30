@@ -351,7 +351,19 @@ export default function EquiposPanel() {
   };
   const unifiedHeaderStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #e5e7eb', backgroundColor: '#EBF8FF' }; // Azul claro header
   const unifiedTitleStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '16px', fontWeight: 600, color: '#1e88e5' }; // Reducido a 16px
-  const unifiedCloseButtonStyle: React.CSSProperties = { backgroundColor: 'white', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease', color: '#1e40af' };
+  const unifiedCloseButtonStyle: React.CSSProperties = {
+    backgroundColor: 'transparent',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'color 0.2s ease', // Transición solo para el color si se cambia
+    color: '#4B5563',
+    // '&:hover': { ... } // Eliminado para evitar error de linter
+  };
   const unifiedBodyStyle: React.CSSProperties = { flexGrow: 1, overflowY: 'auto', padding: '24px', backgroundColor: '#F9FAFB' }; // Gris claro body
   const unifiedTableContainerStyle: React.CSSProperties = { overflowX: 'auto' }; // Contenedor tabla por si acaso
   const unifiedTableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: '13px' };
@@ -1472,8 +1484,8 @@ export default function EquiposPanel() {
                 <Info size={20} />
                 <h2>Detalles Técnicos: {detalleProducto.nombre_del_producto || detalleProducto.codigo_producto || 'Equipo'}</h2>
               </div>
-              <button onClick={handleCloseDetalleModal} className="button-hover" style={unifiedCloseButtonStyle}>
-                <X size={16} />
+              <button onClick={handleCloseDetalleModal} className="button-hover" style={unifiedCloseButtonStyle} title="Cerrar">
+                <X size={22} /> {/* Icono X más grande */}
               </button>
             </div>
             <div style={{...unifiedBodyStyle, maxHeight: 'calc(85vh - 110px)'}}>
@@ -1531,18 +1543,21 @@ export default function EquiposPanel() {
                       <tr style={{ backgroundColor: '#f9fafb' }}>
                         <th style={{ ...unifiedThStyle, width: '100px' }}>Código</th>
                         <th style={unifiedThStyle}>Nombre del Opcional</th>
-                        <th style={unifiedThStyle}>Modelo</th>
+                        <th style={unifiedThStyle}>Asignaciones</th> {/* Encabezado cambiado */}
                         <th style={{...unifiedThStyle, width: '150px'}}>Tipo Producto</th>
                       </tr>
                     </thead>
                     <tbody>
                       {vistaOpcionalesData
-                        .map((opcional, index) => ( // <-- .map() debe seguir directamente a vistaOpcionalesData
+                        .map((opcional, index) => ( 
                           <tr key={opcional.codigo_producto || `opc-${index}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
                             <td style={unifiedTdStyle}>{opcional.codigo_producto || '-'}</td>
-                            {/* Ajuste para tomar nombre_del_producto de caracteristicas primero */}
                             <td style={unifiedTdStyle}>{opcional.caracteristicas?.nombre_del_producto || opcional.nombre_del_producto || '-'}</td>
-                            <td style={unifiedTdStyle}>{opcional.Modelo || opcional.caracteristicas?.modelo || '-'}</td>
+                            <td style={unifiedTdStyle}>
+                              {Array.isArray(opcional.asignado_a_codigo_principal) && opcional.asignado_a_codigo_principal.length > 0
+                                ? opcional.asignado_a_codigo_principal.join(', ') 
+                                : '-'}
+                            </td> {/* Contenido de celda cambiado para mostrar asignaciones */}
                             <td style={unifiedTdStyle}>{opcional.producto || '-'}</td>
                           </tr>
                         ))}
