@@ -151,12 +151,17 @@ export default function ConfigurarOpcionalesPanel() {
 
       console.log('[ConfigurarOpcionalesPanel] Opcionales recibidos y procesados:', opcionalesFinal);
 
-      if (opcionalesFinal.length === 0) {
-        setErrorOpcionales(prev => ({
-          ...prev,
-          [principal.codigo_producto!]: 'No se encontraron opcionales para este producto.' 
-        }));
-      }
+      // if (opcionalesFinal.length === 0) { // Ya no se trata como un error
+      //   setErrorOpcionales(prev => ({
+      //     ...prev,
+      //     [principal.codigo_producto!]: 'No se encontraron opcionales para este producto.' 
+      //   }));
+      // }
+      // Asegurarse de que no haya un error previo para este producto si ahora la lista está vacía pero la llamada fue exitosa
+      setErrorOpcionales(prev => ({ 
+        ...prev, 
+        [principal.codigo_producto!]: null // Limpiar error si la llamada fue exitosa, incluso si no hay opcionales
+      }));
 
       setOpcionalesDisponibles(prev => ({ ...prev, [principal.codigo_producto!]: opcionalesFinal }));
 
@@ -552,15 +557,17 @@ export default function ConfigurarOpcionalesPanel() {
               <Box sx={{ p: 2 }}>
                 {loadingOpcionales[principal.codigo_producto!] && <CircularProgress size={24} sx={{my: 2}}/>}
                 {errorOpcionales[principal.codigo_producto!] && (
-                  <Alert severity="error" sx={{my: 2}}>
-                    Error al cargar opcionales para {principal.nombre_del_producto}: {errorOpcionales[principal.codigo_producto!]}
-                    <Button onClick={() => fetchOpcionalesParaPrincipal(principal)} size="small" startIcon={<RefreshCw size={14}/>} sx={{ml:1}}>Reintentar</Button>
+                  <Alert severity="error" sx={{my: 2, display: 'flex', alignItems: 'center'}}>
+                    Error al cargar opcionales para {principal.nombre_del_producto || 'este equipo'}: {errorOpcionales[principal.codigo_producto!]}
+                    <Button onClick={() => fetchOpcionalesParaPrincipal(principal)} size="small" startIcon={<RefreshCw size={14}/>} sx={{ml:2, whiteSpace: 'nowrap'}}>Reintentar</Button>
                   </Alert>
                 )}
                 
                 {!loadingOpcionales[principal.codigo_producto!] && !errorOpcionales[principal.codigo_producto!] && (
                   (opcionalesDisponibles[principal.codigo_producto!]?.length || 0) === 0 ? (
-                    <Typography sx={{my: 2, fontStyle: 'italic'}}>No hay opcionales disponibles para este equipo.</Typography>
+                    <Alert severity="info" sx={{ my: 2, display: 'flex', alignItems: 'center' }} icon={<Info size={20} />}>
+                      No hay opcionales disponibles para este equipo ({principal.nombre_del_producto || principal.codigo_producto}).
+                    </Alert>
                   ) : (
                     <Grid container spacing={1} sx={{ my: 1 }}>
                       {(opcionalesDisponibles[principal.codigo_producto!] || []).map(opcional => (
