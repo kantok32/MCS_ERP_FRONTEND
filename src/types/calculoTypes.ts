@@ -44,4 +44,6 @@ export interface LineaDeTrabajoConCosto extends ProductoConOpcionales {
     detalleCalculoPrincipal?: CalculationResult;
     detallesCalculoOpcionales?: CalculationResult[];
     precioVentaTotalClienteCLPPrincipal?: number;
+    opcionalesConErroresCalculo?: CalculationResult[];
+    profileIdForCalc?: string;
 } 
