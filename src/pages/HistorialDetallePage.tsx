@@ -45,6 +45,21 @@ const formatNumber = (value: number | null | undefined, digits = 4): string => {
     return Number(value).toFixed(digits);
 };
 
+// FUNCIONES DE FORMATO DE TEXTO AÑADIDAS/ASEGURADAS
+const splitAndCapitalizeKey = (key: string): string => {
+  if (!key) return key;
+  const spacedKey = key.replace(/_/g, ' ')
+                       .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+                       .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
+  return spacedKey.charAt(0).toUpperCase() + spacedKey.slice(1);
+};
+
+const capitalizeFirstLetter = (str: string): string => {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
+// FIN FUNCIONES DE FORMATO DE TEXTO AÑADIDAS/ASEGURADAS
+
 const inputLabels: Record<string, string> = { /* ... (Copia de ResultadosCalculoCostosPanel) ... */ };
 const apiValuesLabels: Record<string, string> = { /* ... (Copia de ResultadosCalculoCostosPanel) ... */ };
 
@@ -56,7 +71,7 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
     if (detalle.error) {
         return <Alert severity="error">Error en el cálculo: {detalle.error}</Alert>;
     }
-    const displayProfileName = profileName || detalle.profileName || "Perfil Desconocido";
+    const displayProfileName = capitalizeFirstLetter(profileName || detalle.profileName || "Perfil Desconocido");
     const inputs = detalle.inputs;
     const calculados = detalle.calculados;
 
@@ -82,14 +97,14 @@ const RenderResultDetails: React.FC<{ detalle: CalculationResult | null, profile
             <Typography variant="subtitle1" gutterBottom>Detalle (Perfil: {displayProfileName})</Typography>
             {Object.entries(calculados).map(([stageName, stageValues]) => (
                 <Box key={stageName} sx={{ mb: 1.5 }}>
-                    <Typography variant="subtitle2" sx={{ textTransform: 'capitalize', fontWeight: 'medium' }}>
-                        {stageName.replace(/_/g, ' ')}
+                    <Typography variant="subtitle2" sx={{ fontWeight: 'medium' }}>
+                        {splitAndCapitalizeKey(stageName)}
                     </Typography>
                     <List dense disablePadding>
                         {Object.entries(stageValues as Record<string, any>).map(([key, value]) => (
                             <ListItem key={key} disableGutters sx={{ py: 0.5 }}>
                                 <ListItemText 
-                                    primary={key.replace(/_/g, ' ')} 
+                                    primary={splitAndCapitalizeKey(key)}
                                     secondary={formatValue(value, key)} 
                                     primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
                                     secondaryTypographyProps={{ variant: 'body2', fontWeight: 'medium', color: 'text.primary' }}
