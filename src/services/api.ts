@@ -262,9 +262,11 @@ const fetchAllProducts = async (): Promise<ProductoData[]> => {
 const calcularCostoProductoConPerfil = async (payload: CalcularCostoProductoPayload): Promise<CalcularCostoProductoResponse> => {
   // Asegurarse de que VITE_API_URL_ENV se use correctamente para formar la URL base.
   // Si VITE_API_URL_ENV está vacía o no definida, podría usarse una URL relativa o local por defecto.
+  console.log('[api.ts] Constante VITE_API_URL_ENV en runtime:', VITE_API_URL_ENV);
   const baseUrl = (VITE_API_URL_ENV && VITE_API_URL_ENV.trim() !== '') 
                   ? (VITE_API_URL_ENV.endsWith('/') ? VITE_API_URL_ENV.slice(0, -1) : VITE_API_URL_ENV)
-                  : ''; // O un valor por defecto como 'http://localhost:5001' si es necesario para desarrollo local y VITE_API_URL_ENV no está seteada.
+                  : ''; 
+  console.log('[api.ts] baseUrl calculada:', baseUrl);
 
   // El endpoint completo, asegurando que /api/ esté presente si baseUrl ya es el dominio.
   // Si baseUrl ya incluye /api (como en algunos casos), entonces solo se añade la ruta específica.
@@ -310,7 +312,7 @@ const calcularCostoProductoConPerfil = async (payload: CalcularCostoProductoPayl
     if (data && data.resultado && data.resultado.inputs && data.resultado.calculados) {
       return data as CalcularCostoProductoResponse;
     } else {
-      console.error('[api.ts] calcularCostoProductoConPerfil: Respuesta API inesperada:', data);
+      console.error('[api.ts] calcularCostoProductoConPerfil: Respuesta API inesperada. CONTENIDO COMPLETO:', JSON.stringify(data));
       throw new Error('La respuesta del servidor no tiene el formato esperado.');
     }
   } catch (error: any) {
