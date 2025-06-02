@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Button, Typography, Checkbox, CircularProgress, Paper, Box, Grid, IconButton, Alert, Container, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField, Autocomplete } from '@mui/material';
+import { Button, Typography, Checkbox, CircularProgress, Paper, Box, Grid, IconButton, Alert, Container, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField, Autocomplete, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { ArrowLeft, ArrowRight, RefreshCw, ChevronDown, ChevronUp, Info, AlertTriangle, Search } from 'lucide-react';
-import { fetchProductByCode, fetchFilteredProducts, searchProducts } from '../services/productService';
+import { fetchProductByCode, fetchAllProducts, searchProducts } from '../services/productService';
 
 // Helper para capitalizar texto al estilo español (primera letra mayúscula)
 const capitalizeSpanish = (text: string): string => {
@@ -19,6 +19,7 @@ interface Producto {
   nombre_del_producto?: string;
   descripcion?: string;
   Modelo?: string;
+  modelo?: string;
   categoria?: string;
   tipo?: string;
   producto?: string; // Para opcionales, indica a qué principal pertenece
@@ -36,6 +37,7 @@ interface Producto {
   nombre_comercial?: string;
   detalles?: any;
   descontinuado?: boolean;
+  fabricante?: string;
   [key: string]: any;
 }
 
@@ -89,12 +91,115 @@ export default function ConfigurarOpcionalesPanel() {
   const [showDiscontinuedWarning, setShowDiscontinuedWarning] = useState(false);
   const [discontinuedProductName, setDiscontinuedProductName] = useState<string>('');
 
-  // New state for product search
+  // Estados para la lista completa de productos principales y filtrados para selección
+  const [todosLosPrincipales, setTodosLosPrincipales] = useState<Producto[]>([]);
+  const [principalesFiltradosParaSeleccion, setPrincipalesFiltradosParaSeleccion] = useState<Producto[]>([]);
+  const [loadingTodosLosPrincipales, setLoadingTodosLosPrincipales] = useState<boolean>(false);
+
+  // Estados para los filtros del nuevo buscador
+  const [filtroBusquedaGeneral, setFiltroBusquedaGeneral] = useState('');
+  const [filtroModeloConfig, setFiltroModeloConfig] = useState('');
+  const [filtroFabricanteConfig, setFiltroFabricanteConfig] = useState('');
+  const [filtroCategoriaConfig, setFiltroCategoriaConfig] = useState('');
+  // Podríamos añadir más filtros como familia, etc. si es necesario
+
+  // Estados para las listas de valores únicos para los dropdowns de los filtros
+  const [uniqueModelosConfig, setUniqueModelosConfig] = useState<string[]>([]);
+  const [uniqueFabricantesConfig, setUniqueFabricantesConfig] = useState<string[]>([]);
+  const [uniqueCategoriasConfig, setUniqueCategoriasConfig] = useState<string[]>([]);
+
+  // New state for product search (DEPRECATED by new filter logic, but kept for Autocomplete for now)
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Producto[]>([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [selectedProductForAddition, setSelectedProductForAddition] = useState<Producto | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
+
+  // Estado para los productos seleccionados en la nueva UI de filtro
+  const [productosSeleccionadosDelFiltro, setProductosSeleccionadosDelFiltro] = useState<Set<string>>(new Set());
+
+  // Efecto para cargar todos los productos principales una vez
+  useEffect(() => {
+    const cargarTodosLosProductosPrincipales = async () => {
+      setLoadingTodosLosPrincipales(true);
+      try {
+        const todosLosProductos = await fetchAllProducts(); // Asume que esto devuelve todos los productos
+        
+        const principales = todosLosProductos.filter((p: Producto) => {
+            const nombreProductoNormalizado = p.nombre_del_producto?.toLowerCase() || '';
+            const tipoProductoNormalizado = p.tipo?.toLowerCase() || '';
+            const esOpcionalPorNombre = nombreProductoNormalizado.includes('opcional');
+            const esOpcionalPorTipoDirecto = tipoProductoNormalizado === 'opcional';
+            // Considerar p.es_opcional si ese campo es confiable
+            return !(esOpcionalPorNombre || esOpcionalPorTipoDirecto || p.es_opcional);
+        });
+
+        setTodosLosPrincipales(principales);
+        setPrincipalesFiltradosParaSeleccion(principales); // Inicialmente mostrar todos
+
+        // Extraer valores únicos para los filtros
+        const modelos = new Set<string>();
+        const fabricantes = new Set<string>();
+        const categorias = new Set<string>();
+
+        principales.forEach((p: Producto) => {
+          if (p.Modelo) modelos.add(p.Modelo.trim()); 
+          else if (p.modelo) modelos.add(p.modelo.trim());
+          
+          if (p.fabricante) fabricantes.add(p.fabricante.trim());
+          if (p.categoria) categorias.add(p.categoria.trim());
+        });
+
+        setUniqueModelosConfig(Array.from(modelos).sort());
+        setUniqueFabricantesConfig(Array.from(fabricantes).sort());
+        setUniqueCategoriasConfig(Array.from(categorias).sort());
+
+      } catch (error) {
+        console.error("Error al cargar todos los productos principales:", error);
+        // Manejar error, quizás mostrar un mensaje al usuario
+      } finally {
+        setLoadingTodosLosPrincipales(false);
+      }
+    };
+    cargarTodosLosProductosPrincipales();
+  }, []);
+
+  // Efecto para aplicar filtros y actualizar principalesFiltradosParaSeleccion
+  useEffect(() => {
+    let productosFiltrados = [...todosLosPrincipales];
+
+    // 1. Aplicar filtro de búsqueda general (nombre, código, descripción)
+    if (filtroBusquedaGeneral.trim()) {
+      const busquedaLower = filtroBusquedaGeneral.toLowerCase().trim();
+      productosFiltrados = productosFiltrados.filter(p => 
+        (p.nombre_del_producto?.toLowerCase().includes(busquedaLower)) ||
+        (p.codigo_producto?.toLowerCase().includes(busquedaLower)) ||
+        (p.descripcion?.toLowerCase().includes(busquedaLower)) ||
+        (p.Modelo?.toLowerCase().includes(busquedaLower)) || // Buscar también en Modelo
+        (p.modelo?.toLowerCase().includes(busquedaLower))
+      );
+    }
+
+    // 2. Aplicar filtro por Modelo
+    if (filtroModeloConfig) {
+      productosFiltrados = productosFiltrados.filter(p => 
+        (p.Modelo === filtroModeloConfig || p.modelo === filtroModeloConfig)
+      );
+    }
+
+    // 3. Aplicar filtro por Fabricante
+    if (filtroFabricanteConfig) {
+      productosFiltrados = productosFiltrados.filter(p => p.fabricante === filtroFabricanteConfig);
+    }
+
+    // 4. Aplicar filtro por Categoría
+    if (filtroCategoriaConfig) {
+      productosFiltrados = productosFiltrados.filter(p => p.categoria === filtroCategoriaConfig);
+    }
+
+    setPrincipalesFiltradosParaSeleccion(productosFiltrados);
+
+  }, [todosLosPrincipales, filtroBusquedaGeneral, filtroModeloConfig, filtroFabricanteConfig, filtroCategoriaConfig]);
 
   const fetchOpcionalesParaPrincipal = useCallback(async (principal: Producto) => {
     if (!principal.codigo_producto || !principal.Modelo) {
@@ -393,6 +498,72 @@ export default function ConfigurarOpcionalesPanel() {
     setShowDiscontinuedWarning(false);
   };
 
+  const handleToggleSeleccionProductoDelFiltro = (codigoProducto: string) => {
+    console.log('[ConfigurarOpcionalesPanel] handleToggleSeleccionProductoDelFiltro, codigo:', codigoProducto);
+    setProductosSeleccionadosDelFiltro(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(codigoProducto)) {
+        newSet.delete(codigoProducto);
+        console.log('[ConfigurarOpcionalesPanel] Producto deseleccionado:', codigoProducto, 'Nuevo Set:', newSet);
+      } else {
+        newSet.add(codigoProducto);
+        console.log('[ConfigurarOpcionalesPanel] Producto seleccionado:', codigoProducto, 'Nuevo Set:', newSet);
+      }
+      return newSet;
+    });
+  };
+
+  const handleAgregarProductosSeleccionados = async () => {
+    console.log('[ConfigurarOpcionalesPanel] handleAgregarProductosSeleccionados INVOCADO'); // Log de entrada
+    console.log('[ConfigurarOpcionalesPanel] Estado actual de productosSeleccionadosDelFiltro:', productosSeleccionadosDelFiltro);
+
+    const productosParaAgregar = todosLosPrincipales.filter(p => p.codigo_producto && productosSeleccionadosDelFiltro.has(p.codigo_producto));
+    console.log('[ConfigurarOpcionalesPanel] Productos para agregar:', productosParaAgregar);
+    
+    let algunoYaExistia = false;
+    const nuevosPrincipales: Producto[] = [...productosPrincipales];
+    const promesasFetchOpcionales: Promise<void>[] = [];
+
+    productosParaAgregar.forEach(productoAAgregar => {
+      const existente = productosPrincipales.find(p => p.codigo_producto === productoAAgregar.codigo_producto);
+      if (!existente) {
+        const nuevoProductoPrincipal = {
+          ...productoAAgregar,
+          categoria: 'principal' // Asegurar que se marque como principal
+        };
+        nuevosPrincipales.push(nuevoProductoPrincipal);
+        
+        setExpandedPrincipales(prev => ({ ...prev, [nuevoProductoPrincipal.codigo_producto!]: true }));
+        setOpcionalesSeleccionados(prev => ({ ...prev, [nuevoProductoPrincipal.codigo_producto!]: new Set<string>() }));
+        promesasFetchOpcionales.push(fetchOpcionalesParaPrincipal(nuevoProductoPrincipal));
+
+      } else {
+        algunoYaExistia = true;
+      }
+    });
+
+    if (nuevosPrincipales.length > productosPrincipales.length) {
+      setProductosPrincipales(nuevosPrincipales);
+    }
+
+    if (promesasFetchOpcionales.length > 0) {
+      await Promise.all(promesasFetchOpcionales);
+    }
+
+    if (algunoYaExistia) {
+      // Podríamos notificar al usuario que algunos productos ya estaban en la lista
+      console.log("Algunos productos seleccionados ya estaban en la lista y no se re-agregaron.");
+    }
+    
+    // Limpiar selección del filtro
+    setProductosSeleccionadosDelFiltro(new Set());
+    // Opcionalmente, resetear filtros (depende de la UX deseada)
+    // setFiltroBusquedaGeneral('');
+    // setFiltroModeloConfig('');
+    // setFiltroFabricanteConfig('');
+    // setFiltroCategoriaConfig('');
+  };
+
   if (productosPrincipales.length === 0 && ( (state?.fromHistory && state.mainProductCodigo) || (state?.productosPrincipales && state.productosPrincipales.length > 0 ) )) {
     let isLoadingFromState = false;
     if (state?.fromHistory && state.mainProductCodigo && loadingOpcionales[state.mainProductCodigo]) {
@@ -412,98 +583,150 @@ export default function ConfigurarOpcionalesPanel() {
   }
 
   console.log('[ConfigurarOpcionalesPanel] Renderizando. productosPrincipales:', productosPrincipales);
+  console.log('[ConfigurarOpcionalesPanel] productosSeleccionadosDelFiltro size:', productosSeleccionadosDelFiltro.size);
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Cargar Nuevo Producto Principal para Configurar
+        <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+          Buscar y Añadir Productos Principales
         </Typography>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={8} md={9}>
-            <Autocomplete
+        
+        {/* Nueva UI de Filtros */}
+        <Grid container spacing={2} sx={{ mb: 2 }}>
+          <Grid item xs={12}>
+            <TextField
               fullWidth
-              options={searchResults}
-              getOptionLabel={(option) => `${option.nombre_del_producto || 'Nombre no disponible'} (${option.codigo_producto || 'Código no disponible'})`}
-              inputValue={searchTerm}
-              onInputChange={(event, newInputValue) => setSearchTerm(newInputValue)}
-              onChange={handleSelectProductForAddition}
-              loading={loadingSearch}
-              loadingText="Buscando..."
-              noOptionsText={searchTerm.length <= 2 ? "Escriba al menos 3 caracteres para buscar" : "No se encontraron productos"}
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  label="Buscar producto por código o nombre"
+              label="Buscar por Nombre, Código, Descripción, Modelo..."
                   variant="outlined"
+              value={filtroBusquedaGeneral}
+              onChange={(e) => setFiltroBusquedaGeneral(e.target.value)}
                   InputProps={{
-                    ...params.InputProps,
-                    startAdornment: (
-                      <Search style={{ marginRight: '8px', color: 'action.active' }} />
-                    ),
-                    endAdornment: (
-                      <>
-                        {loadingSearch ? <CircularProgress color="inherit" size={20} /> : null}
-                        {params.InputProps.endAdornment}
-                      </>
-                    ),
-                  }}
-                />
-              )}
-              isOptionEqualToValue={(option, value) => option.codigo_producto === value.codigo_producto}
-              renderOption={(props, option) => (
-                <Box component="li" {...props} key={option.codigo_producto || option._id || Math.random()}>
-                  <Typography variant="body2">
-                    <strong>{option.nombre_del_producto || 'N/A'}</strong> ({option.codigo_producto || 'N/A'})
-                    {option.descontinuado && <Typography component="span" variant="caption" color="error" sx={{ ml: 1 }}>(Descontinuado)</Typography>}
-                  </Typography>
-                </Box>
-              )}
+                startAdornment: <Search style={{ marginRight: '8px', color: 'action.active' }} />
+              }}
             />
           </Grid>
-          <Grid item xs={12} sm={4} md={3}>
-            <Button
-              fullWidth
-              variant="contained"
-              color="primary"
-              onClick={handleLoadProduct}
-              disabled={!selectedProductForAddition || loadingSearch}
-              startIcon={<RefreshCw size={18} />}
-            >
-              Cargar producto
-            </Button>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Modelo</InputLabel>
+              <Select
+                value={filtroModeloConfig}
+                onChange={(e) => setFiltroModeloConfig(e.target.value as string)}
+                label="Modelo"
+              >
+                <MenuItem value=""><em>Todos</em></MenuItem>
+                {uniqueModelosConfig.map(modelo => (
+                  <MenuItem key={modelo} value={modelo}>{modelo}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Fabricante</InputLabel>
+              <Select
+                value={filtroFabricanteConfig}
+                onChange={(e) => setFiltroFabricanteConfig(e.target.value as string)}
+                label="Fabricante"
+              >
+                <MenuItem value=""><em>Todos</em></MenuItem>
+                {uniqueFabricantesConfig.map(fab => (
+                  <MenuItem key={fab} value={fab}>{fab}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Categoría</InputLabel>
+              <Select
+                value={filtroCategoriaConfig}
+                onChange={(e) => setFiltroCategoriaConfig(e.target.value as string)}
+                label="Categoría"
+              >
+                <MenuItem value=""><em>Todos</em></MenuItem>
+                {uniqueCategoriasConfig.map(cat => (
+                  <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
         </Grid>
-        {searchError && <Alert severity="error" sx={{ mt: 2 }}>{capitalizeSpanish(searchError)}</Alert>}
+
+        {/* Lista de Productos Filtrados */}
+        {loadingTodosLosPrincipales ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}><CircularProgress /></Box>
+        ) : principalesFiltradosParaSeleccion.length === 0 && !filtroBusquedaGeneral && !filtroModeloConfig && !filtroFabricanteConfig && !filtroCategoriaConfig ? (
+          <Typography sx={{ my: 2, textAlign:'center', color: 'text.secondary' }}>Cargando productos o no hay productos principales disponibles.</Typography>
+        ) : principalesFiltradosParaSeleccion.length === 0 ? (
+          <Typography sx={{ my: 2, textAlign:'center', color: 'text.secondary' }}>No se encontraron productos con los filtros aplicados.</Typography>
+        ) : (
+          <Box sx={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #eee', borderRadius: '4px', p:1, mb: 2 }}>
+            {principalesFiltradosParaSeleccion
+              .filter(p => p.codigo_producto) // Asegurar que el producto tiene un código
+              .map(p => {
+                const yaEstaAgregado = productosPrincipales.some(principal => principal.codigo_producto === p.codigo_producto);
+                return (
+                  <Paper 
+                    key={p.codigo_producto!} 
+                    variant="outlined"
+                    sx={{ 
+                      p: 1, 
+                      mb: 1, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      backgroundColor: yaEstaAgregado ? '#f0f0f0' : (productosSeleccionadosDelFiltro.has(p.codigo_producto!) ? '#e3f2fd' : 'inherit'),
+                      opacity: yaEstaAgregado ? 0.7 : 1,
+                      cursor: yaEstaAgregado ? 'not-allowed' : 'pointer',
+                      '&:hover': {
+                        backgroundColor: yaEstaAgregado ? '#f0f0f0' : (productosSeleccionadosDelFiltro.has(p.codigo_producto!) ? '#bbdefb' : '#f5f5f5'),
+                      }
+                    }}
+                    // onClick para el Paper solo si no está agregado, para permitir toggle
+                    // Si está agregado, el onClick del Paper no debería hacer nada o ser removido.
+                    // La lógica del checkbox y el texto se maneja abajo.
+                  >
+                    <Checkbox 
+                      checked={productosSeleccionadosDelFiltro.has(p.codigo_producto!)}
+                      onChange={() => !yaEstaAgregado && handleToggleSeleccionProductoDelFiltro(p.codigo_producto!)}
+                      size="small"
+                      sx={{mr:1}}
+                      disabled={yaEstaAgregado}
+                      onClick={(e) => e.stopPropagation()} 
+                    />
+                    <Box
+                      onClick={() => !yaEstaAgregado && handleToggleSeleccionProductoDelFiltro(p.codigo_producto!)} 
+                      sx={{ 
+                        flexGrow: 1, 
+                        cursor: yaEstaAgregado ? 'default' : 'pointer',
+                        color: yaEstaAgregado ? 'text.disabled' : 'inherit'
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: '500' }}>
+                        {p.nombre_del_producto} ({p.codigo_producto})
+                        {yaEstaAgregado && <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 1 }}>(Ya añadido)</Typography>}
+                      </Typography>
+                      <Typography variant="caption" color={yaEstaAgregado ? 'text.disabled' : 'textSecondary'}>
+                        Modelo: {p.Modelo || p.modelo || 'N/A'} | Fabricante: {p.fabricante || 'N/A'} | Categoría: {p.categoria || 'N/A'}
+                      </Typography>
+                    </Box>
+                  </Paper>
+                );
+            })}
+          </Box>
+        )}
+        
+        <Button 
+          variant="contained" 
+          color="primary"
+          onClick={handleAgregarProductosSeleccionados}
+          disabled={productosSeleccionadosDelFiltro.size === 0 || loadingTodosLosPrincipales}
+          startIcon={<ArrowRight />}
+        >
+          Añadir Seleccionados a Configuración ({productosSeleccionadosDelFiltro.size})
+        </Button>
+
       </Paper>
-
-      <Dialog
-        open={showDiscontinuedWarning}
-        onClose={handleCloseDiscontinuedWarning}
-        aria-labelledby="discontinued-warning-title"
-        aria-describedby="discontinued-warning-description"
-      >
-        <DialogTitle id="discontinued-warning-title" sx={{ display: 'flex', alignItems: 'center' }}>
-          <AlertTriangle color="orange" style={{ marginRight: '8px' }} />
-          Advertencia
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="discontinued-warning-description">
-            El equipo "{capitalizeSpanish(discontinuedProductName)}" (o alguno de los seleccionados) está descontinuado. Los valores y disponibilidad de opcionales pueden variar.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDiscontinuedWarning} color="primary" autoFocus>
-            Cerrar
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {productosPrincipales.length === 0 && !((state?.fromHistory && state.mainProductCodigo) || (state?.productosPrincipales && state.productosPrincipales.length > 0)) && (
-         <Alert severity="info" sx={{mb: 2}}>
-            Por favor, busque y cargue un producto principal para comenzar la configuración de sus opcionales.
-        </Alert>
-      )}
 
       <Paper elevation={3} sx={{ p: 3 }}>
         <Typography variant="h4" gutterBottom align="center">

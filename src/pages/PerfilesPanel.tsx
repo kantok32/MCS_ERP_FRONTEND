@@ -586,8 +586,10 @@ export default function PerfilesPanel() {
               profileId: selectedProfileIdForPrueba, // ID del perfil
               anoCotizacion: numAnoCotizacion,
               anoEnCurso: numAnoEnCurso,
-              costoFabricaOriginalEUR: numCostoFabrica,
-              tipoCambioEurUsdActual: currentEurUsdRate // TC Actual
+              costoFabricaOriginalEUR: String(numCostoFabrica), // Convertido a String
+              tipoCambioEurUsdActual: currentEurUsdRate, // TC Actual
+              // Añadir tasa_seguro_pct del perfil, convirtiéndola a decimal
+              tasa_seguro_pct: parseFloat(pruebaInputs.tasa_seguro_pct as string) / 100
           };
           // Define cómo procesar la respuesta de /calcular-producto
           responseStructureProcessor = (data) => data?.resultado; // También tiene inputs y calculados anidados

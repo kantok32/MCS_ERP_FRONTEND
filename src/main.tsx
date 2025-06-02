@@ -77,8 +77,15 @@ const AnimatedRoutes = () => {
           <Route path="resumen-carga" element={<AnimatedPage><ResumenCargaPanel /></AnimatedPage>} />
           <Route path="historial" element={<AnimatedPage><HistorialPage /></AnimatedPage>} />
           <Route path="historial/:id" element={<AnimatedPage><HistorialDetallePage /></AnimatedPage>} />
-          <Route path="/documento_html" element={<DocumentoHtmlPage />} />
-          <Route path="editar-perfil" element={<AnimatedPage><ProfileEditPage currentUser={{username: 'Hardcoded', email: 'hardcoded@mail.com'}} onProfileUpdate={() => console.log('update fired')} /></AnimatedPage>} />
+          <Route path="/documento_html" element={<AnimatedPage><DocumentoHtmlPage /></AnimatedPage>} />
+          <Route 
+            path="editar-perfil" 
+            element={
+              <AnimatedPage>
+                <ProfileEditPage />
+              </AnimatedPage>
+            } 
+          />
         </Route>
       </Routes>
     </AnimatePresence>

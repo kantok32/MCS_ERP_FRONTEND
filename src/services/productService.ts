@@ -46,6 +46,28 @@ export const fetchProductByCode = async (codigo: string): Promise<Producto | nul
 // export const fetchAllProducts = async (): Promise<Producto[]> => { ... };
 // export const updateProductDetails = async (productId: string, updates: Partial<Producto>): Promise<Producto> => { ... };
 
+export const fetchAllProducts = async (): Promise<Producto[]> => {
+  try {
+    // Se asume que el cache se resetea en otro lugar si es necesario antes de llamar a esto,
+    // o que este endpoint sirve datos suficientemente actualizados.
+    // EquiposPanel.tsx hace un POST a /api/products/cache/reset antes.
+    const response = await fetch('https://mcs-erp-backend-807184488368.southamerica-west1.run.app/api/products/cache/all');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(errorData.message || `Error ${response.status} al obtener todos los productos.`);
+    }
+    const apiResponse = await response.json();
+    if (!apiResponse.success || !apiResponse.data?.products?.data) {
+      console.warn('[productService] fetchAllProducts: Estructura de respuesta inesperada o no exitosa.', apiResponse);
+      throw new Error(apiResponse.message || 'Error en la respuesta del servidor al obtener todos los productos.');
+    }
+    return apiResponse.data.products.data as Producto[];
+  } catch (error) {
+    console.error('Error en fetchAllProducts:', error);
+    throw error; // Re-lanzar el error para que el llamador lo maneje
+  }
+};
+
 export const fetchFilteredProducts = async (searchTerm: string): Promise<Producto[]> => {
   if (!searchTerm.trim()) {
     return [];
