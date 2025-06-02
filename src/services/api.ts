@@ -260,12 +260,68 @@ const fetchAllProducts = async (): Promise<ProductoData[]> => {
 
 // --- INICIO MODIFICACIÓN: Nueva función para calcular costo de producto con perfil ---
 const calcularCostoProductoConPerfil = async (payload: CalcularCostoProductoPayload): Promise<CalcularCostoProductoResponse> => {
+  // Asegurarse de que VITE_API_URL_ENV se use correctamente para formar la URL base.
+  // Si VITE_API_URL_ENV está vacía o no definida, podría usarse una URL relativa o local por defecto.
+  const baseUrl = (VITE_API_URL_ENV && VITE_API_URL_ENV.trim() !== '') 
+                  ? (VITE_API_URL_ENV.endsWith('/') ? VITE_API_URL_ENV.slice(0, -1) : VITE_API_URL_ENV)
+                  : ''; // O un valor por defecto como 'http://localhost:5001' si es necesario para desarrollo local y VITE_API_URL_ENV no está seteada.
+
+  // El endpoint completo, asegurando que /api/ esté presente si baseUrl ya es el dominio.
+  // Si baseUrl ya incluye /api (como en algunos casos), entonces solo se añade la ruta específica.
+  // Para consistencia con ResultadosCalculoCostosPanel, si baseUrl es el dominio, añadimos /api.
+  let endpointPath: string;
+  if (baseUrl.includes('/api')) { // Si VITE_API_URL_ENV ya es 'https://dominio.com/api'
+    endpointPath = `${baseUrl}/costo-perfiles/calcular-producto`;
+  } else if (baseUrl) { // Si VITE_API_URL_ENV es 'https://dominio.com'
+    endpointPath = `${baseUrl}/api/costo-perfiles/calcular-producto`;
+  } else { // Fallback para desarrollo local si VITE_API_URL_ENV no está seteada
+    endpointPath = '/api/costo-perfiles/calcular-producto'; // Usa ruta relativa
+  }
+  
+  console.log('[api.ts] calcularCostoProductoConPerfil: Enviando payload a:', endpointPath, payload);
+
   try {
-    const response = await apiClient.post<CalcularCostoProductoResponse>('/costo-perfiles/calcular-producto', payload);
-    return response.data;
-  } catch (error) {
-    console.error('Error calculating product cost:', error);
-    throw error;
+    const response = await fetch(endpointPath, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    // Verificar si la respuesta es HTML antes de intentar parsearla como JSON
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.indexOf("text/html") !== -1) {
+      const htmlText = await response.text(); // Leer como texto
+      console.error('[api.ts] calcularCostoProductoConPerfil: Respuesta API es HTML:', htmlText.substring(0, 500)); // Loguear solo una parte
+      throw new Error('Error: El servidor devolvió una página HTML en lugar de una respuesta JSON. Verifique la configuración del backend.');
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('[api.ts] calcularCostoProductoConPerfil: Error API:', data);
+      // Usar el mensaje de error de la API si está disponible, sino uno genérico.
+      const errorMessage = data?.message || `Error ${response.status} al calcular costos.`;
+      throw new Error(errorMessage);
+    }
+
+    // Validar la estructura esperada de la respuesta exitosa
+    if (data && data.resultado && data.resultado.inputs && data.resultado.calculados) {
+      return data as CalcularCostoProductoResponse;
+    } else {
+      console.error('[api.ts] calcularCostoProductoConPerfil: Respuesta API inesperada:', data);
+      throw new Error('La respuesta del servidor no tiene el formato esperado.');
+    }
+  } catch (error: any) {
+    console.error('[api.ts] calcularCostoProductoConPerfil: Catch Fetch Error:', error);
+    // Re-lanzar el error para que el llamador pueda manejarlo (e.g., mostrar un mensaje en la UI)
+    // Asegurarse de que el error tenga una propiedad 'message'
+    if (error instanceof Error) {
+        throw error;
+    } else {
+        throw new Error(String(error.message || 'Error de conexión o al procesar la respuesta del cálculo.'));
+    }
   }
 };
 // --- FIN MODIFICACIÓN ---
