@@ -432,7 +432,7 @@ function transformarLineasParaConfiguracion(lineas: LineaDeTrabajoConCosto[], no
 }
 
 export default function ResultadosCalculoCostosPanel() {
-  const location = useLocation<LocationState>();
+  const location = useLocation();
   const navigate = useNavigate();
 
   const [lineasCalculadas, setLineasCalculadas] = useState<LineaDeTrabajoConCosto[]>([]);
@@ -695,7 +695,7 @@ export default function ResultadosCalculoCostosPanel() {
         }
         setIsLoading(false);
       } else if (!location.state?.itemsParaCotizar) {
-        setErrorCarga('No se recibieron items para calcular.');
+        console.warn('[ResultadosCalculoCostosPanel] init: No se recibieron itemsParaCotizar en location.state. Se continúa sin mostrar este error específico en la UI.');
         setIsLoading(false);
       } 
     };
@@ -881,25 +881,31 @@ export default function ResultadosCalculoCostosPanel() {
   };
 
   const handleGenerarInformeHTML = () => {
-    if (!savedCalculoId) {
-        setSaveErrorMessage("Debe calcular y guardar el resultado primero para poder generar el informe.");
+    if (!latestCalculatedResults) {
+        setSaveErrorMessage("Debe calcular los precios primero para poder generar el informe.");
         return;
     }
     if (!currentProfileData) {
-        setSaveErrorMessage("No hay un perfil seleccionado."); 
+        setSaveErrorMessage("No hay un perfil global seleccionado."); 
         return;
     }
-    navigate('/configuracion-panel', {
+
+    const lineasParaInforme = lineasCalculadas.map(linea => ({
+      principal: linea.principal,
+      opcionales: linea.opcionales,
+      detalleCalculoPrincipal: linea.detalleCalculoPrincipal,
+      detallesCalculoOpcionales: linea.detallesCalculoOpcionales,
+    }));
+
+    const configuracionParaDocumento = {
+      lineasCalculadas: lineasParaInforme,
+      nombrePerfilReporte: currentProfileData.nombre_perfil,
+      fechaCreacion: new Date().toISOString(),
+    };
+
+    navigate('/documento_html', {
         state: {
-        itemsParaCotizar: lineasCalculadas.map(linea => ({
-          principal: linea.principal,
-          opcionales: linea.opcionales
-        })),
-            resultadosCalculados: latestCalculatedResults,
-            selectedProfileId: currentProfileData._id,
-            nombrePerfil: currentProfileData.nombre_perfil,
-            anoEnCursoGlobal: anoActualGlobal,
-        historialId: savedCalculoId,
+          configuracion: configuracionParaDocumento
         }
     });
   };

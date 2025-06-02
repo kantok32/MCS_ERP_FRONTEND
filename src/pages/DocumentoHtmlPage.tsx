@@ -134,6 +134,8 @@ export default function DocumentoHtmlPage() {
   const location = useLocation();
   const navigate = useNavigate();
   
+  console.log('[DocumentoHtmlPage] location.state recibido:', location.state);
+
   const configuracion = location.state?.configuracion;
   const printRef = useRef<HTMLDivElement>(null);
 

@@ -592,13 +592,17 @@ export default function PerfilesPanel() {
               tasa_seguro_pct: parseFloat(pruebaInputs.tasa_seguro_pct as string) / 100
           };
           // Define cómo procesar la respuesta de /calcular-producto
-          responseStructureProcessor = (data) => data?.resultado; // También tiene inputs y calculados anidados
+          // ASUMIENDO que la respuesta es plana y no tiene "resultado" anidado
+          responseStructureProcessor = (data) => data?.resultado; // <--- CORRECCIÓN AQUÍ para acceder a la propiedad anidada
       }
 
       try {
           console.log(`Enviando payload a ${endpoint}:`, payload);
           // El tipo de respuesta es el mismo: { message?, perfilUsado?, resultado: { inputs, calculados } }
           const response = await axios.post<any>(endpoint, payload);
+
+          // LOG PARA VER LA RESPUESTA DIRECTA DEL BACKEND
+          console.log('[PerfilesPanel] Respuesta COMPLETA del backend:', response.data);
 
           // Usar el procesador definido para extraer inputs y calculados
           const processedResult = responseStructureProcessor(response.data);
