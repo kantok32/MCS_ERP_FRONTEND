@@ -535,7 +535,7 @@ export default function PerfilesPanel() {
       try {
           console.log(`Enviando payload a ${endpoint}:`, payload);
           // El tipo de respuesta es el mismo: { message?, perfilUsado?, resultado: { inputs, calculados } }
-          const response = await axios.post<any>(endpoint, payload);
+          const response = await api.post<any>(endpoint, payload);
 
           // LOG PARA VER LA RESPUESTA DIRECTA DEL BACKEND
           console.log('[PerfilesPanel] Respuesta COMPLETA del backend:', response.data);
