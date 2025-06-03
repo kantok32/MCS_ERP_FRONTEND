@@ -534,14 +534,20 @@ export default function PerfilesPanel() {
 
       try {
           console.log(`Enviando payload a ${endpoint}:`, payload);
-          // El tipo de respuesta es el mismo: { message?, perfilUsado?, resultado: { inputs, calculados } }
-          const response = await api.post<any>(endpoint, payload);
+          let response;
+          if (isInProfileMode) { // endpoint es '/api/costo-perfiles/calcular-producto'
+              response = await api.calcularCostoProductoConPerfil(payload);
+          } else { // endpoint es '/api/costo-perfiles/calcular-prueba'
+              response = await api.calcularCostoProductoManual(payload);
+          }
 
           // LOG PARA VER LA RESPUESTA DIRECTA DEL BACKEND
-          console.log('[PerfilesPanel] Respuesta COMPLETA del backend:', response.data);
+          // La respuesta de axios ya está en response.data si la función del servicio devuelve la respuesta completa de axios
+          // o solo 'response' si la función del servicio ya extrajo .data
+          console.log('[PerfilesPanel] Respuesta COMPLETA del backend:', response); // Asumimos que la función de api.ts devuelve el .data
 
           // Usar el procesador definido para extraer inputs y calculados
-          const processedResult = responseStructureProcessor(response.data);
+          const processedResult = responseStructureProcessor(response); // Asumimos que la función de api.ts devuelve el .data
 
           if (processedResult && processedResult.calculados && processedResult.inputs) {
               setPruebaResults(processedResult.calculados);

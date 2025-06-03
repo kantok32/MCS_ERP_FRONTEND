@@ -226,6 +226,40 @@ const fetchAllProducts = async (): Promise<ProductoData[]> => {
   }
 };
 
+// Para el endpoint de calcular-prueba para modo manual
+const calcularCostoProductoManual = async (payload: any): Promise<any> => {
+  const endpointPath = '/costo-perfiles/calcular-prueba';
+  console.log(`[api.ts] calcularCostoProductoManual: Usando apiClient. Endpoint: ${determinedApiUrl}${endpointPath}`);
+  console.log('[api.ts] calcularCostoProductoManual: Payload:', payload);
+  try {
+    const response = await apiClient.post<any>(endpointPath, payload);
+    // Asumiendo que la respuesta de calcular-prueba también tiene una estructura anidada similar a calcular-producto
+    // o que el componente que la llama sabe cómo manejarla.
+    // Si la estructura es diferente, el componente necesitará un responseStructureProcessor diferente.
+    const responseData = response.data;
+     if (responseData && responseData.resultado && responseData.resultado.inputs && responseData.resultado.calculados) {
+      console.log('[api.ts] calcularCostoProductoManual: Respuesta API exitosa:', responseData);
+      return responseData;
+    } else {
+      console.error('[api.ts] calcularCostoProductoManual: Respuesta API inesperada. CONTENIDO COMPLETO:', JSON.stringify(responseData));
+      // Devolver la data directamente si no tiene la estructura esperada, 
+      // el componente se encargará de procesarla o mostrar error.
+      // O puedes lanzar un error específico si siempre esperas la estructura anidada.
+      // Por ahora, devolvemos la data tal cual si no cumple el if.
+      // Considera ajustar esto según la estructura real de la respuesta de '/calcular-prueba'
+      console.warn('[api.ts] calcularCostoProductoManual: La respuesta no tiene la estructura {resultado: {inputs, calculados}}. Devolviendo datos directos.');
+      return responseData; 
+    }
+  } catch (error: any) {
+    console.error('[api.ts] calcularCostoProductoManual: Error en la llamada API:', error);
+    const errorMessage = error?.message || 'Error desconocido al calcular costos manualmente.';
+    if (error instanceof Error && !error.message) {
+      throw new Error(errorMessage);
+    }
+    throw error; // Re-lanzar el error para que sea manejado en el componente
+  }
+};
+
 // Función para calcular el costo de un producto utilizando un perfil y datos específicos
 // Esta función ahora es exportada
 export const calcularCostoProductoConPerfil = async (payload: CalcularCostoProductoPayload): Promise<CalcularCostoProductoResponse> => {
@@ -280,4 +314,5 @@ export const api = {
   getCurrencyValues,
   // Cálculos
   calcularCostoProductoConPerfil,
+  calcularCostoProductoManual,
 };
