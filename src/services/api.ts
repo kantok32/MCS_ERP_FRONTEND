@@ -260,49 +260,35 @@ const fetchAllProducts = async (): Promise<ProductoData[]> => {
 
 // --- INICIO MODIFICACIÓN: Nueva función para calcular costo de producto con perfil ---
 const calcularCostoProductoConPerfil = async (payload: CalcularCostoProductoPayload): Promise<CalcularCostoProductoResponse> => {
-  // URL base directa al backend de producción para esta función específica
-  const prodBackendUrl = 'https://mcs-erp-backend-807184488368.southamerica-west1.run.app';
-  const endpointPath = `${prodBackendUrl}/api/costo-perfiles/calcular-producto`;
-
-  console.log('[api.ts] calcularCostoProductoConPerfil: Forzando URL absoluta. Endpoint:', endpointPath);
+  const endpointPath = '/costo-perfiles/calcular-producto'; // apiClient usará determinedApiUrl como base
+  console.log(`[api.ts] calcularCostoProductoConPerfil: Usando apiClient. Endpoint: ${determinedApiUrl}${endpointPath}`);
   console.log('[api.ts] calcularCostoProductoConPerfil: Payload:', payload);
 
   try {
-    const response = await fetch(endpointPath, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    // apiClient.post devuelve la respuesta completa de Axios debido a la configuración del interceptor.
+    const response = await apiClient.post<CalcularCostoProductoResponse>(endpointPath, payload);
+    const responseData = response.data; // Accedemos al cuerpo de la respuesta.
 
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.indexOf("text/html") !== -1) {
-      const htmlText = await response.text();
-      console.error('[api.ts] calcularCostoProductoConPerfil: Respuesta API es HTML (desde URL forzada):', htmlText.substring(0, 500));
-      throw new Error('Error: El servidor (con URL forzada) devolvió una página HTML en lugar de JSON.');
-    }
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('[api.ts] calcularCostoProductoConPerfil: Error API (desde URL forzada):', data);
-      const errorMessage = data?.message || `Error ${response.status} al calcular costos con URL forzada.`;
-      throw new Error(errorMessage);
-    }
-
-    if (data && data.resultado && data.resultado.inputs && data.resultado.calculados) {
-      return data as CalcularCostoProductoResponse;
+    // Validamos la estructura esperada de los datos.
+    if (responseData && responseData.resultado && responseData.resultado.inputs && responseData.resultado.calculados) {
+      console.log('[api.ts] calcularCostoProductoConPerfil: Respuesta API exitosa (usando apiClient):', responseData);
+      return responseData;
     } else {
-      console.error('[api.ts] calcularCostoProductoConPerfil: Respuesta API inesperada (desde URL forzada). CONTENIDO COMPLETO:', JSON.stringify(data));
-      throw new Error('La respuesta del servidor (con URL forzada) no tiene el formato esperado.');
+      console.error('[api.ts] calcularCostoProductoConPerfil: Respuesta API inesperada (usando apiClient). CONTENIDO COMPLETO:', JSON.stringify(responseData));
+      throw new Error('La respuesta del servidor (usando apiClient) no contiene la estructura esperada (inputs y calculados).');
     }
   } catch (error: any) {
-    console.error('[api.ts] calcularCostoProductoConPerfil: Catch Fetch Error (desde URL forzada):', error);
+    console.error('[api.ts] calcularCostoProductoConPerfil: Error en la llamada API (usando apiClient):', error);
+    
+    const errorMessage = error?.message || 'Error desconocido al calcular costos del producto (usando apiClient).';
+    
     if (error instanceof Error) {
-        throw error;
+      if (!error.message) {
+        throw new Error(errorMessage);
+      }
+      throw error;
     } else {
-        throw new Error(String(error.message || 'Error de conexión o al procesar la respuesta del cálculo (con URL forzada).'));
+      throw new Error(errorMessage);
     }
   }
 };
