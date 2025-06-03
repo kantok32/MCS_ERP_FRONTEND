@@ -28,7 +28,8 @@ import {
     Select,
     MenuItem,
     SelectChangeEvent,
-    IconButton
+    IconButton,
+    Autocomplete
 } from '@mui/material';
 import PerfilEditForm from './PerfilEditForm';
 import axios, { AxiosError } from 'axios';
@@ -68,6 +69,7 @@ const formatPercentDisplay = (value: number | null | undefined, digits = 4): str
    return `${(value * 100).toFixed(digits)}%`;
 };
 
+// Define default structure for a new profile (matching backend model, excluding _id, timestamps)
 // --- Tipos para Calculadora ---
 interface PruebaInputs {
     ano_cotizacion: number | string;
@@ -223,11 +225,11 @@ export default function PerfilesPanel() {
   };
   const [pruebaInputs, setPruebaInputs] = useState<PruebaInputs>(defaultPruebaInputs);
   const [pruebaResults, setPruebaResults] = useState<GroupedPruebaResults | null>(null);
+  const [pruebaError, setPruebaError] = useState<string | null>(null);
+  const [selectedProfileIdForPrueba, setSelectedProfileIdForPrueba] = useState<string>('');
   const [pruebaInputValuesUsed, setPruebaInputValuesUsed] = useState<any | null>(null);
   const [pruebaApiValues, setPruebaApiValues] = useState<PruebaApiValues | null>(null);
   const [isCalculatingPrueba, setIsCalculatingPrueba] = useState<boolean>(false);
-  const [pruebaError, setPruebaError] = useState<string | null>(null);
-  const [selectedProfileIdForPrueba, setSelectedProfileIdForPrueba] = useState<string>('');
 
   // --- Función para cargar perfiles ---
   const loadPerfiles = useCallback(async () => {
@@ -440,76 +442,15 @@ export default function PerfilesPanel() {
       }
   };
 
-  // --- Handlers para Modal Prueba ---
-  const handleOpenPruebaModal = () => {
-    setPruebaResults(null);
-    setPruebaError(null);
-    setPruebaInputValuesUsed(null);
-    setSelectedProfileIdForPrueba('');
-    setPruebaInputs(defaultPruebaInputs);
-    setIsPruebaModalOpen(true);
-  };
-
-  const handleClosePruebaModal = () => {
-    if (isCalculatingPrueba) return;
-    setIsPruebaModalOpen(false);
-  };
-
-  const handlePruebaInputChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = event.target;
-    setPruebaInputs(prev => ({
-        ...prev,
-        [name]: value,
-    }));
-  };
-
-  // --- Handler para Selección de Perfil en Prueba ---
-  const handleProfileSelectForPrueba = (event: SelectChangeEvent<string>) => {
-      const profileId = event.target.value as string;
-      setSelectedProfileIdForPrueba(profileId);
-      setPruebaResults(null);
-      setPruebaApiValues(null);
-      setPruebaError(null);
-
-      if (profileId) {
-          const selectedProfile = perfiles.find(p => p._id === profileId);
-          if (selectedProfile) {
-              setPruebaInputs(prev => ({
-                  ...prev,
-                  descuento_pct: ((selectedProfile.descuento_fabrica_pct ?? 0) * 100).toString(),
-                  buffer_eur_usd_pct: ((selectedProfile.buffer_eur_usd_pct ?? 0) * 100).toString(),
-                  costos_origen_eur: (selectedProfile.costo_logistica_origen_eur ?? 0).toString(),
-                  flete_maritimo_usd: (selectedProfile.flete_maritimo_usd ?? 0).toString(),
-                  recargos_destino_usd: (selectedProfile.recargos_destino_usd ?? 0).toString(),
-                  tasa_seguro_pct: ((selectedProfile.tasa_seguro_pct ?? 0) * 100).toString(),
-                  honorarios_agente_aduana_usd: (selectedProfile.costo_agente_aduana_usd ?? 0).toString(),
-                  gastos_portuarios_otros_usd: (selectedProfile.gastos_portuarios_otros_usd ?? 0).toString(),
-                  transporte_nacional_clp: (selectedProfile.transporte_nacional_clp ?? 0).toString(),
-                  buffer_usd_clp_pct: ((selectedProfile.buffer_usd_clp_pct ?? 0) * 100).toString(),
-                  margen_adicional_pct: ((selectedProfile.margen_adicional_pct ?? 0) * 100).toString(),
-                  derecho_advalorem_pct: ((selectedProfile.derecho_advalorem_pct ?? 0.06) * 100).toString(),
-                  iva_pct: ((selectedProfile.iva_pct ?? 0.19) * 100).toString(),
-                  descuento_cliente_pct: ((selectedProfile.descuento_cliente_pct ?? 0) * 100).toString(), // Añadir nuevo campo
-              }));
-          } else {
-              setPruebaInputs(prev => ({ ...defaultPruebaInputs, ano_cotizacion: prev.ano_cotizacion, ano_en_curso: prev.ano_en_curso, costo_fabrica_original_eur: prev.costo_fabrica_original_eur }));
-          }
-      } else {
-          setPruebaInputs(prev => ({ ...defaultPruebaInputs, ano_cotizacion: prev.ano_cotizacion, ano_en_curso: prev.ano_en_curso, costo_fabrica_original_eur: prev.costo_fabrica_original_eur }));
-      }
-  };
-
-  // --- Handler para Calcular Prueba (Corregir parseFloat) ---
+  // --- Handlers para Calcular Prueba (Corregir parseFloat) ---
   const handleCalculatePrueba = async () => {
-      setPruebaError(null);
-      setPruebaResults(null);
+      setPruebaInputValuesUsed(null);
       setPruebaApiValues(null);
-      setPruebaInputValuesUsed(null); 
       setIsCalculatingPrueba(true);
 
       // Obtener tasas de cambio actuales del estado
       const currentEurUsdRate = eurUsdRate;
-      const currentUsdClpRateValue = dolarValue?.value; // Obtener el número directamente
+      const currentUsdClpRateValue = dolarValue?.value;
 
       if (!currentEurUsdRate || currentUsdClpRateValue === null || currentUsdClpRateValue === undefined) {
           setPruebaError("No se pudieron obtener las tasas de cambio actuales.");
@@ -517,12 +458,7 @@ export default function PerfilesPanel() {
           return;
       }
       // *** CORRECCIÓN LINTER: No necesitamos parseFloat si ya es número ***
-      const numCurrentUsdClpRate = currentUsdClpRateValue; 
-      // if (isNaN(numCurrentUsdClpRate)) { // Esta validación ya no es necesaria si viene como número
-      //     setPruebaError("El valor actual de USD/CLP no es válido.");
-      //     setIsCalculatingPrueba(false);
-      //     return;
-      // }
+      const numCurrentUsdClpRate = currentUsdClpRateValue;
 
       let payload: any = {};
       let inputError = false;
@@ -848,6 +784,65 @@ export default function PerfilesPanel() {
     } finally {
         setDuplicatingProfileId(null);
     }
+  };
+
+  // --- Handlers para Modal Prueba ---
+  const handleOpenPruebaModal = () => {
+    setPruebaResults(null);
+    setPruebaError(null);
+    setPruebaInputValuesUsed(null);
+    setSelectedProfileIdForPrueba('');
+    setPruebaInputs(defaultPruebaInputs);
+    setIsPruebaModalOpen(true);
+  };
+
+  const handleClosePruebaModal = () => {
+    if (isCalculatingPrueba) return;
+    setIsPruebaModalOpen(false);
+  };
+
+  const handlePruebaInputChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = event.target;
+    setPruebaInputs(prev => ({
+        ...prev,
+        [name]: value,
+    }));
+  };
+
+  // --- Handler para Selección de Perfil en Prueba ---
+  const handleProfileSelectForPrueba = (event: SelectChangeEvent<string>) => {
+      const profileId = event.target.value as string;
+      setSelectedProfileIdForPrueba(profileId);
+      setPruebaResults(null);
+      setPruebaApiValues(null);
+      setPruebaError(null);
+
+      if (profileId) {
+          const selectedProfile = perfiles.find(p => p._id === profileId);
+          if (selectedProfile) {
+              setPruebaInputs(prev => ({
+                  ...prev,
+                  descuento_pct: ((selectedProfile.descuento_fabrica_pct ?? 0) * 100).toString(),
+                  buffer_eur_usd_pct: ((selectedProfile.buffer_eur_usd_pct ?? 0) * 100).toString(),
+                  costos_origen_eur: (selectedProfile.costo_logistica_origen_eur ?? 0).toString(),
+                  flete_maritimo_usd: (selectedProfile.flete_maritimo_usd ?? 0).toString(),
+                  recargos_destino_usd: (selectedProfile.recargos_destino_usd ?? 0).toString(),
+                  tasa_seguro_pct: ((selectedProfile.tasa_seguro_pct ?? 0) * 100).toString(),
+                  honorarios_agente_aduana_usd: (selectedProfile.costo_agente_aduana_usd ?? 0).toString(),
+                  gastos_portuarios_otros_usd: (selectedProfile.gastos_portuarios_otros_usd ?? 0).toString(),
+                  transporte_nacional_clp: (selectedProfile.transporte_nacional_clp ?? 0).toString(),
+                  buffer_usd_clp_pct: ((selectedProfile.buffer_usd_clp_pct ?? 0) * 100).toString(),
+                  margen_adicional_pct: ((selectedProfile.margen_adicional_pct ?? 0) * 100).toString(),
+                  derecho_advalorem_pct: ((selectedProfile.derecho_advalorem_pct ?? 0.06) * 100).toString(),
+                  iva_pct: ((selectedProfile.iva_pct ?? 0.19) * 100).toString(),
+                  descuento_cliente_pct: ((selectedProfile.descuento_cliente_pct ?? 0) * 100).toString(),
+              }));
+          } else {
+              setPruebaInputs(prev => ({ ...defaultPruebaInputs, ano_cotizacion: prev.ano_cotizacion, ano_en_curso: prev.ano_en_curso, costo_fabrica_original_eur: prev.costo_fabrica_original_eur }));
+          }
+      } else {
+          setPruebaInputs(prev => ({ ...defaultPruebaInputs, ano_cotizacion: prev.ano_cotizacion, ano_en_curso: prev.ano_en_curso, costo_fabrica_original_eur: prev.costo_fabrica_original_eur }));
+      }
   };
 
   return (

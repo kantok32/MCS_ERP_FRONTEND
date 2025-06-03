@@ -3,40 +3,8 @@ import type { Producto } from "../types/product";
 import type { CurrencyData } from "../types/currency";
 import { CostoPerfilData, ProductoData } from '../types';
 import { getCurrencyValues } from './currencyService';
-
-// --- INICIO MODIFICACIÓN: Tipo para el payload de calcularCostoProductoConPerfil ---
-// Este tipo debe coincidir con lo que espera el backend para /api/costo-perfiles/calcular-producto
-interface CalcularCostoProductoPayload {
-  profileId: string;
-  anoCotizacion: number;
-  anoEnCurso: number;
-  costoFabricaOriginalEUR: number;
-  tipoCambioEurUsdActual: number;
-  // tipoCambioUsdClpActual no se envía desde el frontend para esta ruta,
-  // el backend lo obtiene con fetchCurrencyValues
-}
-
-// Asumo que la respuesta del backend para calcular-producto tiene esta estructura
-// (basado en PerfilesPanel y la lógica de backend)
-interface GroupedPruebaResults {
-    costo_producto: any;
-    logistica_seguro: any;
-    importacion: any;
-    landed_cost: any;
-    conversion_margen: any;
-    precios_cliente: any;
-    // Deberían definirse tipos más específicos para cada sección
-}
-
-interface CalcularCostoProductoResponse {
-  perfilUsado?: { _id: string; nombre: string };
-  resultado: {
-    inputs: any; // Datos de entrada que usó el backend
-    calculados: GroupedPruebaResults;
-  };
-  message?: string; // Mensaje de éxito o error
-}
-// --- FIN MODIFICACIÓN ---
+// Importar los tipos desde calculoTypes.ts
+import { CalcularCostoProductoPayload, CalcularCostoProductoResponse, GroupedPruebaResults } from '../types/calculoTypes';
 
 // Establecer URL base según entorno
 // const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'; // Línea original comentada
@@ -258,8 +226,9 @@ const fetchAllProducts = async (): Promise<ProductoData[]> => {
   }
 };
 
-// --- INICIO MODIFICACIÓN: Nueva función para calcular costo de producto con perfil ---
-const calcularCostoProductoConPerfil = async (payload: CalcularCostoProductoPayload): Promise<CalcularCostoProductoResponse> => {
+// Función para calcular el costo de un producto utilizando un perfil y datos específicos
+// Esta función ahora es exportada
+export const calcularCostoProductoConPerfil = async (payload: CalcularCostoProductoPayload): Promise<CalcularCostoProductoResponse> => {
   const endpointPath = '/costo-perfiles/calcular-producto'; // apiClient usará determinedApiUrl como base
   console.log(`[api.ts] calcularCostoProductoConPerfil: Usando apiClient. Endpoint: ${determinedApiUrl}${endpointPath}`);
   console.log('[api.ts] calcularCostoProductoConPerfil: Payload:', payload);
@@ -292,7 +261,6 @@ const calcularCostoProductoConPerfil = async (payload: CalcularCostoProductoPayl
     }
   }
 };
-// --- FIN MODIFICACIÓN ---
 
 // Exportar las funciones
 export const api = {
